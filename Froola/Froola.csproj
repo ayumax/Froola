@@ -5,6 +5,14 @@
         <OutputType>Exe</OutputType>
         <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
+        <Version>0.0.1</Version>
+        <Authors>ayumax</Authors>
+        <Product>Froola</Product>
+        <Description>A toolkit for building, testing, and managing Unreal Engine plugins with automation support</Description>
+        <Copyright>Copyright © 2025 ayumax</Copyright>
+        <PackageTags>cli,utility,tool</PackageTags>
+        <RepositoryUrl>https://github.com/ayumax/Froola</RepositoryUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
     </PropertyGroup>
 
     <ItemGroup>
