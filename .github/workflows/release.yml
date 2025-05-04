@@ -26,9 +26,18 @@ jobs:
         id: get_version
         shell: pwsh
         run: |
+          # Find the first .csproj file
           $csproj = Get-ChildItem -Path ./Froola -Filter *.csproj | Select-Object -First 1
+          if (-not $csproj) {
+            Write-Error "No .csproj file found in ./Froola"
+            exit 1
+          }
           [xml]$xml = Get-Content $csproj.FullName
           $version = $xml.Project.PropertyGroup.Version
+          if ([string]::IsNullOrEmpty($version)) {
+            Write-Error "Version is missing in csproj"
+            exit 1
+          }
           echo "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Check if tag exists
@@ -71,13 +80,17 @@ jobs:
         shell: pwsh
         run: |
           git fetch --tags
-          $tags = git tag --sort=-creatordate
-          if ($tags.Count -le 1) {
+          # Get tag list as array to count correctly
+          $tags = git tag --sort=-creatordate | Where-Object { $_ -ne "" }
+          $tagList = $tags -split "`n"
+          if ($tagList.Count -le 1) {
+            Write-Warning "Only one or no tag exists. No previous tag will be set."
             $prev = ""
           } else {
             try {
               $prev = git describe --tags --abbrev=0 HEAD^
             } catch {
+              Write-Warning "Failed to get previous tag using HEAD^, setting previous tag to empty."
               $prev = ""
             }
           }
@@ -99,7 +112,13 @@ jobs:
             $since = git log $prev..HEAD --pretty=format:'%H' | Sort-Object | Select-Object -First 1
             gh pr list --state merged --base main --search "+merged:>=$since" --json title,number --jq ".[] | \"- #\(.number) \(.title)\"" > pr_titles.txt
           }
-          $changelog = Get-Content pr_titles.txt | Out-String
+          # Read PR titles if file exists, otherwise set changelog to empty
+          if (Test-Path pr_titles.txt) {
+            $changelog = Get-Content pr_titles.txt | Out-String
+          } else {
+            Write-Warning "No PR titles file found. Setting changelog to empty."
+            $changelog = ""
+          }
           echo "log<<EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           echo $changelog | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           echo "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
