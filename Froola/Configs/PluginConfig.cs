@@ -58,7 +58,7 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
     public PluginConfig Build()
     {
         var resultPath = string.IsNullOrEmpty(ResultPath)
-            ? Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location)!, "outputs")
+            ? Path.Combine(AppContext.BaseDirectory, "outputs")
             : ResultPath;
 
         ResultPath = Path.Combine(resultPath, $"{DateTime.Now:yyyyMMdd_HHmmss}_{PluginName}");
