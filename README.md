@@ -1,95 +1,94 @@
 # Froola
-Unreal Engineコードプラグインプロジェクトのマルチプラットフォーム（Windows, Mac, Linux）自動ビルド・テストツール
+
+[![CI](https://github.com/ayumax/Froola/actions/workflows/ci.yml/badge.svg)](https://github.com/ayumax/Froola/actions/workflows/ci.yml)
+
+Froola is an automated build and test tool for Unreal Engine code plugin projects, supporting multi-platform deployment (Windows, Mac, Linux).
 
 
-## 概要
-Froolaは、Unreal Engineコードプラグインプロジェクトのビルドとテストを自動化し、複数プラットフォーム（Windows/Mac/Linux）での動作検証を容易にします。
-
-またコードプラグインのパッケージを全プラットフォーム入りのマージされた成果物として出力します。
-
-## 特徴
-- UE5.0以降に対応(5.3以降のみ動作確認を実施済み)
-- コマンドラインから簡単に実行可能
-- CI/CDやクロスプラットフォーム開発現場での利用を想定
-- .NET9.0 + C# 12で開発
-
-## サポート環境
-- Unreal Engine: 5.0以降
-- OS: Windows, Mac, Linux（LinuxはWindows上のDocker経由で実行）
-- パッケージタイプ: Win64, Mac, Linux, Android, IOS
-
-## Setup方法
-開発のベースはWindowsを前提としています。Windows以外はオプションです。
-そのためFroolaもWindows上で実行します。
-
-またAndroidビルドはWindowsのUEで、IOSビルドはMacのUEで行います。
-LinuxビルドはWindows PCで行いますが、Windows UEではなく、Dockerを使用します。
+## Overview
+Froola streamlines the process of building and testing Unreal Engine code plugin projects across multiple platforms (Windows, Mac, Linux). It automates the build, test, and packaging workflow, and outputs a merged package containing all supported platforms.
 
 
-### 共通設定
-1. UE Pluginプロジェクトを作成しテスト、パッケージビルドを可能な状態にする
-2. GitHubリポジトリにプッシュする
-   - リポジトリ構成はPluginsディレクトリのみでなくUnreal Editorで読み込み可能なように、UEプロジェクトディレクトリをトップディレクトリにする
-   - 参考リポジトリ : [ObjectDeliverer](https://github.com/ayumax/ObjectDeliverer)
+## Features
+- Supports Unreal Engine 5.0 and later (tested on 5.3+)
+- Easy command-line execution
+- Designed for CI/CD and cross-platform development environments
+- Developed with .NET 9.0 and C# 12
 
-### Windows設定
-1. Unreal Engine 5.0以降のバージョンをインストール
-2. Visual Studioインストール(C++ビルド環境を構築)
+## Supported Platforms
+- Unreal Engine: 5.0 or later
+- OS: Windows, Mac, Linux (Linux builds are executed via Docker on Windows)
+- Package Types: Win64, Mac, Linux, Android, iOS
 
-- 以下はAndroid向けパッケージ作成をしたい場合
+## Setup
+Development is primarily based on Windows. Running Froola on Windows is recommended; other platforms are optional.
 
-3. Unreal Engineをインストールする際にAndroidにチェックをいれておく
-4. Android開発環境構築(参考：[公式ドキュメント](https://dev.epicgames.com/documentation/ja-jp/unreal-engine/set-up-android-sdk-ndk-and-android-studio-using-turnkey-for-unreal-engine))
-
-### Mac設定
-1. Unreal Engine 5.0以降のバージョンをインストール
-2. Xcodeインストール(C++ビルド環境を構築)
-3. WindowsからMacへSSH接続設定（SSH/SCPを利用）
-   - SSH接続はパスワード、公開鍵認証のいずれかで設定してください
-4. SSHでxcode-selectをsudoなしで実行できる設定(任意)
-   - 通常、xcode-selectコマンドは管理者権限（sudo）が必要ですが、セキュリティ上の理由からsudoなしで実行できるようにするには、特定コマンドのみパスワードなしsudoを許可する設定を行います。
-   - 以下の手順で設定してください。
-   - Xcodeを切り替えない場合はxcode-selectは不要です
-   - UEとXcodeのバージョン関係は[公式ドキュメント](https://dev.epicgames.com/documentation/ja-jp/unreal-engine/ios-ipados-and-tvos-development-requirements-for-unreal-engine)を参考にしてください
-   - Xcodeを切り替える場合は、別途appsettings.jsonのMac.XcodeNamesを更新してください
-
-   1. ターミナルでvisudoを実行してsudoersファイルを編集します。
-      ```sh
-      sudo visudo
-      ```
-   2. sudoersファイルの末尾に以下の行を追加します（youruserはMacにSSH接続するユーザー名に置き換えてください）。
-      ```sh
-      youruser ALL=(ALL) NOPASSWD: /usr/bin/xcode-select
-      ```
-   3. これでSSH経由でも `sudo xcode-select` をパスワードなしで実行できるようになります。
-   4. Froolaのビルドプロセスでは `xcode-select` をsudoをつけずに実行するため、上記設定が必要です。
-   5. セキュリティ上、他のsudoコマンドは許可しないように注意してください。
+- Android builds are performed with Unreal Engine on Windows.
+- iOS builds are performed with Unreal Engine on Mac.
+- Linux builds are performed on Windows using Docker (not Windows UE).
 
 
-### Linux（Docker）設定
-1. Dockerのインストール(Podmanでも可)
-2. Unreal EngineのDockerイメージ取得（slim推奨）
-   1. GitHubのUnreal Engineのリポジトリへのアクセス権を取得 [公式ドキュメント](https://www.unrealengine.com/ja/ue-on-github)
-   2. docker loginするためのGitHubアクセストークン(read:package 権限をつける)を取得
-   3. コマンドを実行してイメージをダウンロード
+### Common Setup
+1. Create a UE Plugin project and ensure it can be built, tested, and packaged.
+2. Push the project to a GitHub repository.
+   - The repository should be structured so that the UE project directory is at the top level, not just the Plugins directory, to allow loading in Unreal Editor.
+   - Example repository: [ObjectDeliverer](https://github.com/ayumax/ObjectDeliverer)
 
-#### Dockerイメージ取得例(UE5.5 slimイメージ)
+### Windows Setup
+1. Install Unreal Engine 5.0 or later.
+2. Install Visual Studio (C++ build environment required).
+
+- For Android packaging:
+3. When installing Unreal Engine, enable Android support.
+4. Set up the Android development environment (see [Official Documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/set-up-android-sdk-ndk-and-android-studio-using-turnkey-for-unreal-engine)).
+
+### Mac Setup
+1. Install Unreal Engine 5.0 or later.
+2. Install Xcode (C++ build environment required).
+3. Set up SSH access from Windows to Mac (using SSH/SCP).
+   - SSH access can be set up using either password or public key authentication.
+4. (Optional) Configure SSH to allow `xcode-select` execution without sudo password:
+   - Normally, `xcode-select` requires sudo, but for security, you can allow passwordless sudo for only this command.
+   - Edit the sudoers file using the following steps:
+     1. Open terminal and run:
+        ```sh
+        sudo visudo
+        ```
+     2. Add the following line at the end of the file (replace `youruser` with your Mac SSH username):
+        ```sh
+        youruser ALL=(ALL) NOPASSWD: /usr/bin/xcode-select
+        ```
+     3. Now `sudo xcode-select` can be executed via SSH without a password.
+     4. Froola's build process requires `xcode-select` without sudo, so this setup is needed.
+     5. For security, do not allow passwordless sudo for other commands.
+   - If you do not need to switch Xcode versions, `xcode-select` is not required.
+   - For UE and Xcode version compatibility, see [Official Documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/ios-ipados-and-tvos-development-requirements-for-unreal-engine).
+   - If switching Xcode versions, update `Mac.XcodeNames` in `appsettings.json` accordingly.
+
+### Linux (Docker) Setup
+1. Install Docker (Podman is also supported).
+2. Obtain the Unreal Engine Docker image (slim version recommended).
+   1. Get access to the Unreal Engine GitHub repository [Official Documentation](https://www.unrealengine.com/en-US/ue-on-github).
+   2. Obtain a GitHub access token (with `read:package` permission) for Docker login.
+   3. Run the command to download the image.
+
+#### Docker Image Acquisition Example (UE5.5 slim image)
 ```sh
-// ログイン(GitHubのIDとアクセストークンを入力する)
+// Login (enter your GitHub ID and access token)
 docker login ghcr.io
-// イメージをダウンロード
+// Download the image
 docker pull ghcr.io/epicgames/unreal-engine:dev-slim-5.5.0
 ```
 
-## Froolaのインストール・セットアップ
-1. GitHubリリースから最新のFroolaをダウンロードして解凍
-2. `appsettings.json`ファイルを更新して基本設定を行う（例：デフォルトのパスや認証情報など）
+## Froola Installation and Setup
+1. Download the latest Froola release from GitHub and extract it.
+2. Update the `appsettings.json` file to configure basic settings (e.g., default paths, authentication info, etc.).
 
-## 設定方法
-- 基本設定は `appsettings.json` に記述
-- 実行時の詳細設定や上書きはコマンドライン引数で指定
+## Configuration
+- Basic settings are specified in `appsettings.json`.
+- Detailed or override settings can be specified with command-line arguments at runtime.
 
-#### appsettings.json例
+#### Example appsettings.json
 ```json
 {
   "Git": {
@@ -131,88 +130,87 @@ docker pull ghcr.io/epicgames/unreal-engine:dev-slim-5.5.0
 }
 ```
 
-最新のappsettings.jsonテンプレートはFroolaから以下のコマンドで出力可能です。出力後に編集してください。
+The latest appsettings.json template can be generated by running the following command from Froola. Edit it after output.
 ```sh
 Froola.exe init-config -o "path to save config template(*.json)"
 ```
 
-### appsettings.json 各項目の説明テンプレート（全項目分）
+### appsettings.json Item Description Template (All Items)
 
-| 項目名（パス）                        | 型         | 説明                                           | 例                                             |
+| Item Name (Path)                        | Type         | Description                                           | Example                                             |
 |--------------------------------------|------------|------------------------------------------------|-----------------------------------------------|
-| Git.GitRepositoryUrl                 | string     | GitリポジトリのURL                             | "git@github.com:xxx/yyy.git"                 |
-| Git.GitBranch                        | string     | チェックアウトするブランチ名                    | "main"                                       |
-| Git.GitSshKeyPath                    | string     | GitHub用のSSH秘密鍵ファイルのパス (※1)         | "C:\\Users\\user\\.ssh\\id_rsa"            |
-| InitConfig.OutputPath                | string     | appsetting.jsonテンプレート出力先パス (※2)      | "C:\\FroolaConfig"                           |
-| Mac.MacUnrealBasePath                | string     | Mac上のUnreal Engineインストールベースパス      | "/Users/Shared/Epic Games"                   |
-| Mac.SshUser                          | string     | Mac接続時のSSHユーザー名                        | "macuser"                                    |
-| Mac.SshPassword                      | string     | Mac接続時のSSHパスワード（公開鍵認証時は不要）   | "password"                                   |
-| Mac.SshPrivateKeyPath                | string     | Mac接続時のSSH秘密鍵パス（公開鍵認証の場合に必要）     | "/Users/user/.ssh/id_rsa"                    |
-| Mac.SshHost                          | string     | MacのIPアドレスまたはホスト名                   | "192.168.1.100"                              |
-| Mac.SshPort                          | int        | MacのSSHポート番号                              | 22                                            |
-| Mac.XcodeNames                       | Key-Value  | UEバージョンごとのXcodeパス  (※3)                 | {"5.5":"/Applications/Xcode.app"}            |
-| Plugin.EditorPlatforms               | array      | 利用するエディタープラットフォーム                | ["Windows","Mac","Linux"]                   |
-| Plugin.EngineVersions                | array      | 利用するUnreal Engineバージョン                 | ["5.5"]                                      |
-| Plugin.ResultPath                    | string     | 結果出力先ディレクトリ (※4)                     | "C:\\UEPluginResults"                        |
-| Plugin.RunTest                       | bool       | テスト実行するか                                | true                                          |
-| Plugin.RunPackage                    | bool       | パッケージ作成を実行するか                      | true                                          |
-| Plugin.PackagePlatforms              | array      | パッケージ作成対象のプラットフォーム             | ["Win64","Mac","Linux","Android","IOS"]     |
-| Windows.WindowsUnrealBasePath        | string     | Windows上のUnreal Engineインストールベースパス   | "C:\\Program Files\\Epic Games"              |
-| Linux.DockerCommand                  | string     | Dockerコマンド("docker" or "podman")           | "docker"                                     |
-| Linux.DockerImage                    | string     | Dockerイメージ(%vにはUEのバージョンが入る)      | "ghcr.io/epicgames/unreal-engine:dev-slim-%v" |
+| Git.GitRepositoryUrl                 | string     | Git repository URL                             | "git@github.com:xxx/yyy.git"                 |
+| Git.GitBranch                        | string     | Branch name to checkout                            | "main"                                       |
+| Git.GitSshKeyPath                    | string     | GitHub SSH private key file path (※1)         | "C:\\Users\\user\\.ssh\\id_rsa"            |
+| InitConfig.OutputPath                | string     | appsettings.json template output path (※2)      | "C:\\FroolaConfig"                           |
+| Mac.MacUnrealBasePath                | string     | Mac Unreal Engine installation base path      | "/Users/Shared/Epic Games"                   |
+| Mac.SshUser                          | string     | Mac SSH username                                | "macuser"                                    |
+| Mac.SshPassword                      | string     | Mac SSH password (not required for public key authentication)   | "password"                                   |
+| Mac.SshPrivateKeyPath                | string     | Mac SSH private key path (required for public key authentication)     | "/Users/user/.ssh/id_rsa"                    |
+| Mac.SshHost                          | string     | Mac IP address or hostname                   | "192.168.1.100"                              |
+| Mac.SshPort                          | int        | Mac SSH port number                              | 22                                            |
+| Mac.XcodeNames                       | Key-Value  | UE version-specific Xcode paths  (※3)                 | {"5.5":"/Applications/Xcode.app"}            |
+| Plugin.EditorPlatforms               | array      | Editor platforms to use                            | ["Windows","Mac","Linux"]                   |
+| Plugin.EngineVersions                | array      | Unreal Engine versions to use                 | ["5.5"]                                      |
+| Plugin.ResultPath                    | string     | Result output directory (※4)                     | "C:\\UEPluginResults"                        |
+| Plugin.RunTest                       | bool       | Run tests                                       | true                                          |
+| Plugin.RunPackage                    | bool       | Run packaging                                   | true                                          |
+| Plugin.PackagePlatforms              | array      | Packaging platforms to use                     | ["Win64","Mac","Linux","Android","IOS"]     |
+| Windows.WindowsUnrealBasePath        | string     | Windows Unreal Engine installation base path   | "C:\\Program Files\\Epic Games"              |
+| Linux.DockerCommand                  | string     | Docker command ("docker" or "podman")           | "docker"                                     |
+| Linux.DockerImage                    | string     | Docker image (%v will be replaced with UE version)      | "ghcr.io/epicgames/unreal-engine:dev-slim-%v" |
 
-※1 Git.GitSshKeyPathが未設定の場合はHTTPSでクローンをためします
-※2 InitConfig.OutputPathが未設定、または空文字列の場合は、カレントディレクトリにappsettings.jsonを出力します
-※3 UEのバージョンに応じて異なるバージョンのXcodeを使用する場合に設定します。この機能を使用する場合は別途xcode-selectコマンドをsudoなしで実行できる設定を行ってください。
-※4 Plugin.ResultPathが未設定、または空文字列の場合は、Froola.exe同じディレクトリのoutputsディレクトリに出力します
+※1 If Git.GitSshKeyPath is not set, HTTPS will be used for cloning.
+※2 If InitConfig.OutputPath is not set or empty, the current directory will be used for output.
+※3 Set UE version-specific Xcode paths if you need to use different Xcode versions for different UE versions.
+※4 If Plugin.ResultPath is not set or empty, the "outputs" directory in the same directory as Froola.exe will be used for output.
 
-## 使い方
+## Usage
 
-最低限の引数を指定して実行する場合は以下のようになります。
+To run Froola with the minimum required arguments, use the following command:
 ```sh
 Froola.exe plugin -n <plugin name> -p <project name> -u <git repository url> -b <git branch>
 ```
 
-- 例1 ObjectDelivererプラグインをWindows, Mac環境でWin64, Mac, Android, IOS向けにテスト実施とパッケージ作成
+- Example 1: Build and package the ObjectDeliverer plugin for Windows, Mac, and Linux platforms (UE 5.5)
 ```sh
 Froola.exe plugin -n ObjectDeliverer -p ObjectDelivererTest -u git@github.com:ayumax/ObjectDeliverer.git -b master -e [Windows,Mac]  -v [5.5] -t -c -g [Win64,Mac,Android,IOS]
 ```
 
-上記コマンドを実行すると、appsettings.jsonの設定を元に処理が行われます。
+This command will execute the build and packaging process based on the settings in `appsettings.json`.
 
-### pluginコマンドの主な引数
+### plugin Command Main Arguments
 
-| オプション名                  | 型         | 説明                                             |
+| Option Name                  | Type         | Description                                             |
 |------------------------------|------------|--------------------------------------------------|
-| -n, --plugin-name            | string     | プラグイン名（必須）                             |
-| -p, --project-name           | string     | プロジェクト名（必須）                           |
-| -u, --git-repository-url     | string     | GitリポジトリURL（必須）                         |
-| -b, --git-branch             | string     | ブランチ名（必須）                               |
-| -e, --editor-platforms       | string[]?  | Editorプラットフォーム（例: Windows, Mac, Linux）|
-| -v, --engine-versions        | string[]?  | Unreal Engineバージョン（例: 5.3, 5.4, 5.5）     |
-| -o, --result-path            | string?    | 結果保存先                                       |
-| -t, --run-test               | bool?      | テスト実行                                       |
-| -c, --run-package            | bool?      | パッケージ実行                                   |
-| -g, --package-platforms      | string[]?  | ゲームプラットフォーム（Win64, Mac, Linux, Android, IOS）|
+| -n, --plugin-name            | string     | Plugin name (required)                             |
+| -p, --project-name           | string     | Project name (required)                           |
+| -u, --git-repository-url     | string     | Git repository URL (required)                         |
+| -b, --git-branch             | string     | Branch name (required)                               |
+| -e, --editor-platforms       | string[]?  | Editor platforms (e.g., Windows, Mac, Linux)|
+| -v, --engine-versions        | string[]?  | Unreal Engine versions (e.g., 5.3, 5.4, 5.5)     |
+| -o, --result-path            | string?    | Result output directory                                       |
+| -t, --run-test               | bool?      | Run tests                                       |
+| -c, --run-package            | bool?      | Run packaging                                   |
+| -g, --package-platforms      | string[]?  | Packaging platforms (Win64, Mac, Linux, Android, IOS)|
 
 
-※必須でない項目はappsettings.jsonでも設定可能。両方で指定時はコマンドライン引数が優先されます。
-※各プラットフォーム・バージョン指定はカンマ区切りの配列で指定します。
-※配列表記は["Windows","Mac","Linux"]のように指定します。
+※Non-required items can also be set in `appsettings.json`. Command-line arguments take priority over `appsettings.json` settings.
+※Specify platforms and versions as comma-separated arrays (e.g., ["Windows","Mac","Linux"]).
+※Array notation is ["Windows","Mac","Linux"].
 
-### pluginコマンド実行時の主な流れ
-1. 指定したGitリポジトリのブランチWindows上にクローン
-2. クローンしたディレクトリを各プラットフォームごとにコピー
-3. 各プラットフォームごとにビルド・テスト・パッケージ処理を実行します。
-4. 結果は `results` ディレクトリに保存されます。
-5. プラグインパッケージの成果物はUEバージョンごとにマージされます。
-6. releaseディレクトリをzip圧縮すればそのままマルチプラットフォーム対応プラグインとしてFabへアップロードできます。
+### plugin Command Execution Flow
+1. Clone the specified Git repository to the Windows platform.
+2. Copy the cloned directory to each platform.
+3. Execute the build, test, and packaging process for each platform.
+4. Save the results in the `results` directory.
+5. Merge the plugin packages for each platform.
+6. Save the merged package in the `releases` directory.
 
+## Output Example
+Results are saved in the directory specified by `--result-path` (or `appsettings.json`'s `Plugin.ResultPath`) in the following structure:
 
-## 結果の保存先
-結果は --result-path で指定したディレクトリ（もしくはappsettins.jsonのPlugin.ResultPath）に以下のように保存されます：
-
-プラグイン名=ObjectDeliverer、UE5.5でWindwos, Mac, Linux環境で実行した場合
+Plugin name = ObjectDeliverer, UE 5.5, Windows, Mac, and Linux platforms
 ```
 20250502_205034_ObjectDeliverer/
 ├── build
@@ -271,37 +269,33 @@ Froola.exe plugin -n ObjectDeliverer -p ObjectDelivererTest -u git@github.com:ay
 └── settings.json
 ```
 
-- buildディレクトリ : 各プラットフォームごとのビルド結果
-  - Build.log : UEがビルド時に出力したログ
-- testsディレクトリ : 各プラットフォームごとのテスト結果
-  - AutomationTest.log : UEがテスト時に出力したログ
-  - index.html : テスト結果のHTML
-  - index.json : テスト結果のJSON
-- packagesディレクトリ : 各プラットフォームごとのパッケージ結果
-  - BuildPlugin.log : UEがパッケージ時に出力したログ
-  - Pluginディレクトリ : パッケージ結果
-- releasesディレクトリ : 各プラットフォームごとのリリース結果
-  - <プラグイン名>_<UEバージョン>ディレクトリ : packagesディレクトリをマージして1つにしたプラグインパッケージ
-- froola.log : Froolaのログ
-- settings.json : appsettings.jsonとコマンドライン引数両方をマージした実行時の設定
+- build directory : Build results for each platform
+  - Build.log : UE build log
+- tests directory : Test results for each platform
+  - AutomationTest.log : UE test log
+  - index.html : Test result HTML
+  - index.json : Test result JSON
+- packages directory : Package results for each platform
+  - BuildPlugin.log : UE package log
+  - Plugin directory : Package result
+- releases directory : Merged package for all platforms
+  - <Plugin name>_<UE version> directory : Merged plugin package
+- froola.log : Froola log
+- settings.json : Merged settings from `appsettings.json` and command-line arguments
 
+## Notes
+- Before running Froola, ensure that the necessary services (Docker, SSH, Xcode, Visual Studio, etc.) are properly set up for each platform.
+- Mac packaging is performed via SSH on the Mac platform.
+- Linux builds are performed on Windows using Docker.
 
-### 注意事項
-- Froola実行前に、各プラットフォームごとに必要な依存サービス（Docker, SSH, Xcode, Visual Studioなど）が正しくセットアップされている必要があります。
-- Macのパッケージ作成はSSH経由でMac上でビルド・テストされます。
-- LinuxビルドはWindows上のDockerで行われます。
+## License
+Froola is provided under the MIT License.
 
+## Contributing
+Contributions to Froola are welcome! Please report any bugs or suggest new features by creating an issue or submitting a pull request.
 
-## ライセンス・注意事項
-- 本ツールはMITライセンスで提供されています。
-- セキュリティ上、SSHやsudo設定は十分ご注意ください。
-
-## Contribute
-
-Froolaへの貢献を歓迎しています！バグ報告や新機能の提案、プルリクエスト（PR）はいつでもお待ちしています。
-
-- バグや改善点があれば、まずはIssueを作成してください。
-- コードの変更を提案する場合は、Forkしてブランチを作成し、PRを送ってください。
-- PRの際は、できるだけ詳細な説明と、関連するIssueがあればリンクをお願いします。
-- 新規追加されたクラスやメソッドは、可能な限りテストを追加してください。
-- すべての貢献者に感謝します！
+- Create an issue for bug reports or feature requests.
+- Fork the repository and create a branch for your changes.
+- Submit a pull request with a detailed description and related issue link (if applicable).
+- Add tests for new classes or methods whenever possible.
+- Thank you to all contributors!
