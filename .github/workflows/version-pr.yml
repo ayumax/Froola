@@ -25,14 +25,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      # Update version in csproj and output the result
       - name: Update version in csproj
         run: |
-          csproj=$(find ./Froola -maxdepth 1 -name "*.csproj" | head -n 1)
+          csproj="./Froola/Froola.csproj"
+          echo "Target csproj: $csproj"
           if grep -q '<Version>' "$csproj"; then
             sed -i "s|<Version>.*</Version>|<Version>${{ github.event.inputs.version }}</Version>|" "$csproj"
           else
-            sed -i "/<PropertyGroup>/a \\t<Version>${{ github.event.inputs.version }}</Version>" "$csproj"
+            sed -i "/<PropertyGroup>/a \  <Version>${{ github.event.inputs.version }}</Version>" "$csproj"
           fi
+          echo "==== After update ===="
+          cat "$csproj"
 
       - name: Commit changes
         run: |
