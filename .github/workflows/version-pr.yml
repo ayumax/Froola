@@ -1,0 +1,51 @@
+name: Create Version PR
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.2.3)'
+        required: true
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update version in csproj
+        run: |
+          csproj=$(find ./Froola -maxdepth 1 -name "*.csproj" | head -n 1)
+          if grep -q '<Version>' "$csproj"; then
+            sed -i "s|<Version>.*</Version>|<Version>${{ github.event.inputs.version }}</Version>|" "$csproj"
+          else
+            sed -i "/<PropertyGroup>/a \\t<Version>${{ github.event.inputs.version }}</Version>" "$csproj"
+          fi
+
+      - name: Commit changes
+        run: |
+          git checkout -b release/v${{ github.event.inputs.version }}
+          git add ./Froola/*.csproj
+          git commit -m "chore: bump version to ${{ github.event.inputs.version }}"
+          git push origin release/v${{ github.event.inputs.version }}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: bump version to ${{ github.event.inputs.version }}"
+          branch: release/v${{ github.event.inputs.version }}
+          title: "Release: v${{ github.event.inputs.version }}"
+          body: "This is an automatically generated version update pull request."
