@@ -95,6 +95,7 @@ jobs:
             }
           }
           echo "tag=$prev" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          exit 0
 
       - name: Generate changelog from PR titles
         id: changelog
