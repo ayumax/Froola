@@ -146,7 +146,7 @@ Froola.exe init-config -o "path to save config template(*.json)"
 | Mac.MacUnrealBasePath                | string     | Mac Unreal Engine installation base path      | "/Users/Shared/Epic Games"                   |
 | Mac.SshUser                          | string     | Mac SSH username                                | "macuser"                                    |
 | Mac.SshPassword                      | string     | Mac SSH password (not required for public key authentication)   | "password"                                   |
-| Mac.SshPrivateKeyPath                | string     | Mac SSH private key path (required for public key authentication)     | "/Users/user/.ssh/id_rsa"                    |
+| Mac.SshPrivateKeyPath                | string     | Mac SSH private key path (required for public key authentication)     | "C:\\Users\\user\\.ssh\\id_rsa_mac"                   |
 | Mac.SshHost                          | string     | Mac IP address or hostname                   | "192.168.1.100"                              |
 | Mac.SshPort                          | int        | Mac SSH port number                              | 22                                            |
 | Mac.XcodeNames                       | Key-Value  | UE version-specific Xcode paths  (※3)                 | {"5.5":"/Applications/Xcode.app"}            |
