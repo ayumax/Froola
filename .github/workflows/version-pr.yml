@@ -26,6 +26,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       # Update version in csproj and output the result
+      # Create release branch first for safe operation
+      - name: Create release branch
+        run: git checkout -b release/v${{ github.event.inputs.version }}
+
+      # Update version in csproj and output the result
       - name: Update version in csproj
         run: |
           csproj="./Froola/Froola.csproj"
@@ -40,10 +45,9 @@ jobs:
 
       - name: Commit changes
         run: |
-          git checkout -b release/v${{ github.event.inputs.version }}
           git add ./Froola/*.csproj
           git commit -m "chore: bump version to ${{ github.event.inputs.version }}"
-          git push origin release/v${{ github.event.inputs.version }}
+          git push --set-upstream origin release/v${{ github.event.inputs.version }}
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
@@ -54,3 +58,4 @@ jobs:
           base: main
           title: "Release: v${{ github.event.inputs.version }}"
           body: "This is an automatically generated version update pull request."
+
