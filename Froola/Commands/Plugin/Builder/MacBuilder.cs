@@ -26,6 +26,8 @@ public class MacBuilder(
     private readonly PluginConfig _pluginConfig = pluginConfig;
     private readonly MacConfig _macConfig = macConfig;
 
+    private bool _isReady;
+
     /// <summary>
     /// Gets the editor platform for this builder (Mac).
     /// </summary>
@@ -46,6 +48,12 @@ public class MacBuilder(
             StatusOfTest = BuildStatus.None,
             StatusOfPackage = BuildStatus.None
         };
+
+        if (!_isReady)
+        {
+            logger.LogError("Mac builder is not ready");
+            return result;
+        }
 
         try
         {
@@ -122,11 +130,14 @@ public class MacBuilder(
     /// <inheritdoc cref="IBuilder" />
     public override async Task PrepareRepository(string baseRepositoryPath, UEVersion engineVersion)
     {
+        _isReady = false;
+        
         RepositoryPath =
             $"/tmp/{_pluginConfig.PluginName}/{DateTime.Now:yyyyMMdd_HHmmss}/{engineVersion.ToVersionString()}";
 
         try
         {
+            
             // Check if the remote directory exists and create it if needed
             var dirCheckResult = await macUeRunner.DirectoryExists(RepositoryPath);
             if (!dirCheckResult)
@@ -151,6 +162,8 @@ public class MacBuilder(
             }
 
             logger.LogInformation($"Mac repository prepared at: {RepositoryPath}");
+
+            _isReady = true;
         }
         catch (Exception ex)
         {

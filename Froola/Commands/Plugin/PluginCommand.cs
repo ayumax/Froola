@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
@@ -152,12 +152,10 @@ public class PluginCommand(
         // Clean up temporary directory
         CleanupClonedDirectory();
 
-        // Output overall results
-        _logger.LogInformation($"All build finished. Check {_pluginConfig.ResultPath} for details.");
-
         OutputResults(buildResultsMap);
 
-        _logger.LogInformation("All tasks have completed");
+        // Output overall results
+        _logger.LogInformation($"All tasks finished. Check {_pluginConfig.ResultPath} for details.");
     }
 
     private void CreateWorkingRepositoryDirectory()
@@ -177,7 +175,7 @@ public class PluginCommand(
         }
 
         var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
-        _baseRepoPath = Path.Combine(tempBase, timestamp);
+        _baseRepoPath = Path.Combine(tempBase, timestamp, "base");
 
         // Create a results directory if it doesn't exist
         if (!_fileSystem.DirectoryExists(_baseRepoPath))
@@ -199,8 +197,18 @@ public class PluginCommand(
         {
             _logger.LogError("Failed to clone repository for Windows");
         }
-    }
 
+        var gitDirectory = Path.Combine(_baseRepoPath, ".git");
+        try
+        {
+            _fileSystem.RemoveReadOnlyAttribute(gitDirectory);
+            _fileSystem.DeleteDirectory(gitDirectory, true);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning($"Warning: Could not delete directory {gitDirectory}: {e.Message}");
+        }
+    }
 
     /// <summary>
     ///     Cleans up temporary directories used during the build process.
@@ -229,16 +237,22 @@ public class PluginCommand(
     /// </summary>
     private void OutputResults(Dictionary<UEVersion, BuildResult[]> buildResultsMap)
     {
+        _logger.LogInformation("-------------------------------------------");
+        
         foreach (var (engineVersion, value) in buildResultsMap)
         {
             foreach (var buildResult in value)
             {
+                _logger.LogInformation(
+                    $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Build    : {buildResult.StatusOfBuild}");
                 _logger.LogInformation(
                     $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Test    : {buildResult.StatusOfTest}");
                 _logger.LogInformation(
                     $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Package : {buildResult.StatusOfPackage}");
             }
         }
+
+        _logger.LogInformation("-------------------------------------------");
     }
 
     /// <summary>

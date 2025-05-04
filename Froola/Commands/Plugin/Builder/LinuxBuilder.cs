@@ -92,7 +92,7 @@ public class LinuxBuilder(
     /// <inheritdoc cref="IBuilder" />
     public override Task PrepareRepository(string baseRepositoryPath, UEVersion engineVersion)
     {
-        _repoPathInWindows = Path.Combine(baseRepositoryPath, "..", "Linux");
+        _repoPathInWindows = Path.Combine(baseRepositoryPath, "..", "Linux", engineVersion.ToVersionString());
 
         try
         {

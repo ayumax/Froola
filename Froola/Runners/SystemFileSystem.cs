@@ -122,4 +122,35 @@ public class SystemFileSystem : IFileSystem
     ///     Creates or overwrites a file at the specified path and returns a writeable stream.
     /// </summary>
     public Stream Create(string path) => File.Create(path);
+
+    /// <summary>
+    ///     Removes the ReadOnly attribute from all files and directories under the specified directory.
+    /// </summary>
+    public void RemoveReadOnlyAttribute(string directoryPath)
+    {
+        // Remove ReadOnly attribute from all files recursively
+        foreach (var file in Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories))
+        {
+            var attributes = File.GetAttributes(file);
+            if ((attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+            {
+                File.SetAttributes(file, attributes & ~FileAttributes.ReadOnly);
+            }
+        }
+        // Remove ReadOnly attribute from all subdirectories recursively
+        foreach (var dir in Directory.GetDirectories(directoryPath, "*", SearchOption.AllDirectories))
+        {
+            var attributes = File.GetAttributes(dir);
+            if ((attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+            {
+                File.SetAttributes(dir, attributes & ~FileAttributes.ReadOnly);
+            }
+        }
+        // Remove ReadOnly attribute from the root directory itself
+        var rootAttributes = File.GetAttributes(directoryPath);
+        if ((rootAttributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+        {
+            File.SetAttributes(directoryPath, rootAttributes & ~FileAttributes.ReadOnly);
+        }
+    }
 }

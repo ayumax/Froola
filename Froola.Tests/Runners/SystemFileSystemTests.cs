@@ -158,6 +158,31 @@ public class SystemFileSystemTests : IDisposable
         }
     }
 
+    [Fact]
+    public void RemoveReadOnlyAttribute_RemovesReadOnlyFromFilesAndDirectories()
+    {
+        // Create directory and file
+        var dirPath = Path.Combine(_testRootDir, "readonlydir");
+        var filePath = Path.Combine(dirPath, "readonlyfile.txt");
+        Directory.CreateDirectory(dirPath);
+        File.WriteAllText(filePath, "readonly");
+
+        // Set ReadOnly attribute
+        File.SetAttributes(filePath, File.GetAttributes(filePath) | FileAttributes.ReadOnly);
+        File.SetAttributes(dirPath, File.GetAttributes(dirPath) | FileAttributes.ReadOnly);
+
+        // Ensure ReadOnly is set
+        Assert.True((File.GetAttributes(filePath) & FileAttributes.ReadOnly) == FileAttributes.ReadOnly);
+        Assert.True((File.GetAttributes(dirPath) & FileAttributes.ReadOnly) == FileAttributes.ReadOnly);
+
+        // Remove ReadOnly attribute using SystemFileSystem
+        _fs.RemoveReadOnlyAttribute(dirPath);
+
+        // Check ReadOnly is removed
+        Assert.False((File.GetAttributes(filePath) & FileAttributes.ReadOnly) == FileAttributes.ReadOnly);
+        Assert.False((File.GetAttributes(dirPath) & FileAttributes.ReadOnly) == FileAttributes.ReadOnly);
+    }
+
     public void Dispose()
     {
         // Cleanup: Remove all files and directories created during tests

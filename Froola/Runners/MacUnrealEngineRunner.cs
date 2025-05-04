@@ -131,7 +131,7 @@ public class MacUnrealEngineRunner(ISshConnection sshConnection) : IMacUnrealEng
         // Get current Xcode path
         var originalXcodePath = await GetCurrentXcodePath();
         // Switch to the specified Xcode
-        await sshConnection.SendCommand($"sudo xcode-select --switch '{xcodePath}'");
+        await sshConnection.SendCommand($"xcode-select --switch '{xcodePath}'");
         return originalXcodePath;
     }
 
