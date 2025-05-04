@@ -49,6 +49,17 @@ jobs:
           git commit -m "chore: bump version to ${{ github.event.inputs.version }}"
           git push --set-upstream origin release/v${{ github.event.inputs.version }}
 
+      - name: Debug fetch and diff after push
+        run: |
+          git fetch origin main
+          git fetch origin release/v${{ github.event.inputs.version }}
+          echo "main branch version:"
+          git show origin/main:./Froola/Froola.csproj | grep '<Version>'
+          echo "release branch version:"
+          git show origin/release/v${{ github.event.inputs.version }}:./Froola/Froola.csproj | grep '<Version>'
+          echo "diff:"
+          git diff origin/main..origin/release/v${{ github.event.inputs.version }} -- ./Froola/Froola.csproj
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
