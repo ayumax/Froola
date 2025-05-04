@@ -22,8 +22,9 @@ public class PluginContainerBuilder : IContainerBuilder
         services.AddSingleton<IDockerRunner, DockerRunner>();
         services.AddSingleton<IMacUnrealEngineRunner, MacUnrealEngineRunner>();
         services.AddSingleton<IGitClient, GitClient>();
-        services.AddSingleton<SshConnection>();
+        services.AddSingleton<ISshConnection, SshConnection>();
         services.AddSingleton<IConfigJsonExporter, ConfigJsonExporter>();
+        services.AddSingleton<IProcessRunner, ProcessRunner>();
         
         // PluginCommands
         services.AddTransientService<WindowsBuilder>().As<IBuilder>().As<IWindowsBuilder>();
