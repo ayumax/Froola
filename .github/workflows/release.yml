@@ -88,9 +88,8 @@ jobs:
             Write-Warning "Only one or no tag exists. No previous tag will be set."
             $prev = ""
           } else {
-            try {
-              $prev = git describe --tags --abbrev=0 HEAD^
-            } catch {
+            $prev = git describe --tags --abbrev=0 HEAD^ 2>$null
+            if ($LASTEXITCODE -ne 0) {
               Write-Warning "Failed to get previous tag using HEAD^, setting previous tag to empty."
               $prev = ""
             }
