@@ -8,26 +8,13 @@ public class WindowsConfigTests
 {
     private readonly Fixture _fixture = new();
 
-    private void SetupValidWindowsConfigStrings(WindowsConfig config)
-    {
-        // Add valid values if WindowsConfig has string properties with restrictions
-    }
-
-    [Fact]
-    public void PostConfigure_Throws_WhenRequiredPropertyIsNullOrEmpty()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void PostConfigure_Throws_WhenRequiredPropertyIsNullOrEmpty(string? unrealBasePath)
     {
         var config = _fixture.Build<WindowsConfig>()
-            .Create();
-        SetupValidWindowsConfigStrings(config);
-        var postConfigure = new WindowsConfigPostConfigure();
-        Assert.Throws<OptionsValidationException>(() => postConfigure.PostConfigure(null, config));
-    }
-
-    [Fact]
-    public void PostConfigure_Throws_WhenWindowsUnrealBasePathDoesNotExist()
-    {
-        var config = _fixture.Build<WindowsConfig>()
-            .With(x => x.WindowsUnrealBasePath, "Z:/this/path/does/not/exist")
+            .With(x => x.WindowsUnrealBasePath, unrealBasePath)
             .Create();
         var postConfigure = new WindowsConfigPostConfigure();
         Assert.Throws<OptionsValidationException>(() => postConfigure.PostConfigure(null, config));
@@ -36,9 +23,8 @@ public class WindowsConfigTests
     [Fact]
     public void PostConfigure_DoesNotThrow_WhenWindowsUnrealBasePathExists()
     {
-        var existingPath = Directory.Exists("C:/") ? "C:/" : "C:\\";
         var config = _fixture.Build<WindowsConfig>()
-            .With(x => x.WindowsUnrealBasePath, existingPath)
+            .With(x => x.WindowsUnrealBasePath, Directory.GetCurrentDirectory())
             .Create();
         var postConfigure = new WindowsConfigPostConfigure();
         var exception = Record.Exception(() => postConfigure.PostConfigure(null, config));
