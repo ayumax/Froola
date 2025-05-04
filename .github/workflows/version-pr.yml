@@ -49,12 +49,3 @@ jobs:
           title: "Release: v${{ github.event.inputs.version }}"
           body: "This is an automatically generated version update pull request."
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: bump version to ${{ github.event.inputs.version }}"
-          branch: release/v${{ github.event.inputs.version }}
-          base: main
-          title: "Release: v${{ github.event.inputs.version }}"
-          body: "This is an automatically generated version update pull request."
