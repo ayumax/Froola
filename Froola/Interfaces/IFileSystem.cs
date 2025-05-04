@@ -87,4 +87,8 @@ public interface IFileSystem
     ///     Creates or overwrites a file at the specified path and returns a writeable stream.
     /// </summary>
     Stream Create(string path);
+    /// <summary>
+    ///     Removes the ReadOnly attribute from all files and directories under the specified directory.
+    /// </summary>
+    void RemoveReadOnlyAttribute(string directoryPath);
 }

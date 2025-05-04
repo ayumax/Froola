@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,31 +17,10 @@ public class DockerRunner(
     LinuxConfig linuxConfig) : IDockerRunner
 {
     /// <inheritdoc />
-      public async Task<bool> IsDockerReady()
+    public Task<bool> IsDockerReady()
     {
-        // Try to execute "<dockerCommand> info" and check if it succeeds.
-        // If any error occurs (including command not found), return false.
-        var command = linuxConfig.DockerCommand;
-        const string args = "info";
-        var hasError = false;
-        try
-        {
-            await foreach (var line in processRunner.RunAsync(command, args, Directory.GetCurrentDirectory(),
-                               new Dictionary<string, string>()))
-            {
-                // If any line contains 'ERROR', treat as not ready
-                if (!string.IsNullOrWhiteSpace(line) && line.Contains("ERROR", StringComparison.CurrentCultureIgnoreCase))
-                {
-                    hasError = true;
-                }
-            }
-        }
-        catch (Exception)
-        {
-            // If any exception occurs (e.g., command not found), Docker is not ready
-            return false;
-        }
-        return !hasError;
+        // ToDo : Threre is no way to check if docker is ready right now
+        return Task.FromResult(true);
     }
 
     /// <inheritdoc />

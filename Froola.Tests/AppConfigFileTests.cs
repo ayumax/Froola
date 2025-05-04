@@ -100,16 +100,28 @@ public class AppConfigFileTests
         }
         finally
         {
-            // テスト後にファイル削除
             if (File.Exists(appsettingsJsonPath))
             {
-                File.Delete(appsettingsJsonPath);
+                try
+                {
+                    var attributes = File.GetAttributes(appsettingsJsonPath);
+                    if ((attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+                    {
+                        File.SetAttributes(appsettingsJsonPath, attributes & ~FileAttributes.ReadOnly);
+                    }   
+
+                    File.Delete(appsettingsJsonPath);   
+                }
+                catch
+                {
+                    /* ignore */
+                }
             }
         }
     }
 
     [CollectionDefinition("FileExclusiveCollection")]
-public class FileExclusiveCollection : ICollectionFixture<object>
-{
-}
+    public class FileExclusiveCollection : ICollectionFixture<object>
+    {
+    }
 }

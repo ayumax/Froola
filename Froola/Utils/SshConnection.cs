@@ -4,7 +4,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Froola.Configs;
 using Froola.Interfaces;
-using Microsoft.Extensions.Options;
 using Renci.SshNet;
 using Renci.SshNet.Common;
 
@@ -13,7 +12,7 @@ namespace Froola.Utils;
 /// <summary>
 ///     SSH and SCP connection wrapper to simplify remote operations.
 /// </summary>
-public sealed class SshConnection(IFroolaLogger<SshConnection> logger, IOptions<MacConfig> macOptions)
+public sealed class SshConnection(IFroolaLogger<SshConnection> logger, MacConfig macConfig)
     : IDisposable, ISshConnection
 {
     private bool _disposed;
@@ -85,22 +84,20 @@ public sealed class SshConnection(IFroolaLogger<SshConnection> logger, IOptions<
 
     private ConnectionInfo MakeConnectionInfo()
     {
-        var commonConfig = macOptions.Value;
-
         AuthenticationMethod? authMethod = null;
 
-        if (string.IsNullOrWhiteSpace(commonConfig.SshPassword))
+        if (string.IsNullOrWhiteSpace(macConfig.SshPassword))
         {
-            var keyFile = new PrivateKeyFile(commonConfig.SshPrivateKeyPath);
-            authMethod = new PrivateKeyAuthenticationMethod(commonConfig.SshUser, keyFile);
+            var keyFile = new PrivateKeyFile(macConfig.SshPrivateKeyPath);
+            authMethod = new PrivateKeyAuthenticationMethod(macConfig.SshUser, keyFile);
         }
         else
         {
-            authMethod = new PasswordAuthenticationMethod(commonConfig.SshUser, commonConfig.SshPassword);
+            authMethod = new PasswordAuthenticationMethod(macConfig.SshUser, macConfig.SshPassword);
         }
 
-        return new ConnectionInfo(commonConfig.SshHost, commonConfig.SshPort,
-            commonConfig.SshUser, authMethod);
+        return new ConnectionInfo(macConfig.SshHost, macConfig.SshPort,
+            macConfig.SshUser, authMethod);
     }
 
     /// <summary>

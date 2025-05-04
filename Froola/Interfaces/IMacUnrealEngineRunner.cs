@@ -8,7 +8,6 @@ namespace Froola.Interfaces;
 /// </summary>
 public interface IMacUnrealEngineRunner
 {
-    
     #region Directory Operations
     /// <summary>
     /// Creates a directory on the remote Mac.
