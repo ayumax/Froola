@@ -71,7 +71,16 @@ jobs:
         shell: pwsh
         run: |
           git fetch --tags
-          $prev = git describe --tags --abbrev=0 HEAD^
+          $tags = git tag --sort=-creatordate
+          if ($tags.Count -le 1) {
+            $prev = ""
+          } else {
+            try {
+              $prev = git describe --tags --abbrev=0 HEAD^
+            } catch {
+              $prev = ""
+            }
+          }
           echo "tag=$prev" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Generate changelog from PR titles
