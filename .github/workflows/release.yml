@@ -104,13 +104,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $prev = '${{ steps.prev_tag.outputs.tag }}'
-          $curr = 'v${{ steps.get_version.outputs.version }}'
           # If there is no previous tag, get all merged PRs to main
           if ([string]::IsNullOrEmpty($prev)) {
             gh pr list --state merged --base main --json title,number --jq '.[] | "- #\(.number) \(.title)"' > pr_titles.txt
           } else {
-            # If there is a previous tag, get merged PRs since previous tag
-            $since = git log $prev..HEAD --pretty=format:'%H' | Sort-Object | Select-Object -First 1
+            # Get previous tag commit date in ISO8601 format
+            $since = git show -s --format=%cI $prev
             gh pr list --state merged --base main --search "+merged:>=$since" --json title,number --jq '.[] | "- #\(.number) \(.title)"' > pr_titles.txt
           }
           # Read PR titles if file exists, otherwise set changelog to empty
