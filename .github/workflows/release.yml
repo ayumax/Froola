@@ -136,17 +136,6 @@ jobs:
             
             ## Changes
             ${{ steps.changelog.outputs.log }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Release Asset
-        if: steps.tag_exists.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.get_version.outputs.version }}
-          name: Froola_${{ steps.get_version.outputs.version }}_win-x64.zip
-          asset_path: Froola_${{ steps.get_version.outputs.version }}_win-x64.zip
-          asset_name: Froola_${{ steps.get_version.outputs.version }}_win-x64.zip
-          asset_content_type: application/zip
+          files: Froola_${{ steps.get_version.outputs.version }}_win-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
