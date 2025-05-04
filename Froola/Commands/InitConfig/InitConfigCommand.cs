@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -34,8 +34,19 @@ public class InitConfigCommand(IOptions<InitConfigConfig> configOptions)
         {
             outputPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
         }
+        else
+        {
+            if (Directory.Exists(outputPath) || outputPath.EndsWith("/") || outputPath.EndsWith("\\"))
+            {
+                outputPath = Path.Combine(outputPath, "appsettings.json");
+            }
+        }
 
-        var outputDir = Path.GetDirectoryName(outputPath)!;
+        var outputDir = Path.GetDirectoryName(outputPath);
+        if (string.IsNullOrEmpty(outputDir))
+        {
+            outputDir = Directory.GetCurrentDirectory();
+        }
         if (!Directory.Exists(outputDir))
         {
             Directory.CreateDirectory(outputDir);
