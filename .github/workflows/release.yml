@@ -106,11 +106,11 @@ jobs:
           $curr = 'v${{ steps.get_version.outputs.version }}'
           # If there is no previous tag, get all merged PRs to main
           if ([string]::IsNullOrEmpty($prev)) {
-            gh pr list --state merged --base main --json title,number --jq ".[] | \"- #\(.number) \(.title)\"" > pr_titles.txt
+            gh pr list --state merged --base main --json title,number --jq '.[] | "- #\(.number) \(.title)"' > pr_titles.txt
           } else {
             # If there is a previous tag, get merged PRs since previous tag
             $since = git log $prev..HEAD --pretty=format:'%H' | Sort-Object | Select-Object -First 1
-            gh pr list --state merged --base main --search "+merged:>=$since" --json title,number --jq ".[] | \"- #\(.number) \(.title)\"" > pr_titles.txt
+            gh pr list --state merged --base main --search "+merged:>=$since" --json title,number --jq '.[] | "- #\(.number) \(.title)"' > pr_titles.txt
           }
           # Read PR titles if file exists, otherwise set changelog to empty
           if (Test-Path pr_titles.txt) {
