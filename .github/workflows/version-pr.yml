@@ -61,7 +61,7 @@ jobs:
           git diff origin/main..origin/release/v${{ github.event.inputs.version }} -- ./Froola/Froola.csproj
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: bump version to ${{ github.event.inputs.version }}"
