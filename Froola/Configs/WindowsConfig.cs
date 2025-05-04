@@ -20,10 +20,10 @@ public class WindowsConfigPostConfigure : IPostConfigureOptions<WindowsConfig>
         var section = ConfigHelper.GetSection<WindowsConfig>();
         
         // WindowsUnrealBasePath
-        if (!Directory.Exists(config.WindowsUnrealBasePath))
+        if (string.IsNullOrWhiteSpace(config.WindowsUnrealBasePath))
         {
             throw new OptionsValidationException(section, typeof(WindowsConfig),
-                [$"{nameof(WindowsConfig.WindowsUnrealBasePath)} path does not exist"]);
+                [$"{nameof(WindowsConfig.WindowsUnrealBasePath)} must not be empty"]);
         }
     }
 }
