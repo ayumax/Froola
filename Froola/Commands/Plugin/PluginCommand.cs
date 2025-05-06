@@ -58,7 +58,7 @@ public class PluginCommand(
         string? gitBranch = null,
         string? localRepositoryPath = null,
         [EnumArray(typeof(EditorPlatform))] string[]? editorPlatforms = null,
-        [EnumArray(typeof(UEVersion))] string[]? engineVersions = null,
+        [UeVersionEnumArray] string[]? engineVersions = null,
         string? resultPath = null,
         bool? runTest = null,
         bool? runPackage = null,
@@ -71,7 +71,8 @@ public class PluginCommand(
             ProjectName = projectName,
             EditorPlatforms = editorPlatforms is null
                 ? configOptions.Value.EditorPlatforms
-                : new OptionList<EditorPlatform>(editorPlatforms.Select(Enum.Parse<EditorPlatform>).ToArray()),
+                : new OptionList<EditorPlatform>(editorPlatforms.Select(x => Enum.Parse<EditorPlatform>(x, true))
+                    .ToArray()),
             EngineVersions = engineVersions is null
                 ? configOptions.Value.EngineVersions
                 : new OptionList<UEVersion>(engineVersions.Select(UEVersionExtensions.Parse).ToArray()),
@@ -80,7 +81,8 @@ public class PluginCommand(
             RunPackage = runPackage ?? configOptions.Value.RunPackage,
             PackagePlatforms = packagePlatforms is null
                 ? configOptions.Value.PackagePlatforms
-                : new OptionList<GamePlatform>(packagePlatforms.Select(Enum.Parse<GamePlatform>).ToArray())
+                : new OptionList<GamePlatform>(
+                    packagePlatforms.Select(x => Enum.Parse<GamePlatform>(x, true)).ToArray())
         }.Build();
 
         _gitConfig = new GitConfig

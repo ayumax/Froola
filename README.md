@@ -176,7 +176,7 @@ Froola.exe plugin -n <plugin name> -p <project name> -u <git repository url> -b 
 
 - Example 1: Build and package the ObjectDeliverer plugin for Windows, Mac, and Linux platforms (UE 5.5)
 ```sh
-Froola.exe plugin -n ObjectDeliverer -p ObjectDelivererTest -u git@github.com:ayumax/ObjectDeliverer.git -b master -e [Windows,Mac]  -v [5.5] -t -c -g [Win64,Mac,Android,IOS]
+Froola.exe plugin -n ObjectDeliverer -p ObjectDelivererTest -u git@github.com:ayumax/ObjectDeliverer.git -b master -e Windows,Mac -v 5.5 -t -c -g Win64,Mac,Android,IOS
 ```
 
 This command will execute the build and packaging process based on the settings in `appsettings.json`.
@@ -199,8 +199,7 @@ This command will execute the build and packaging process based on the settings 
 
 
 ※Non-required items can also be set in `appsettings.json`. Command-line arguments take priority over `appsettings.json` settings.
-※Specify platforms and versions as comma-separated arrays (e.g., ["Windows","Mac","Linux"]).
-※Array notation is ["Windows","Mac","Linux"].
+※Specify platforms and versions as comma-separated arrays (e.g., Windows,Mac,Linux).
 
 ### plugin Command Execution Flow
 1. Clone the specified Git repository to the Windows platform.(if `--local-repository-path` is not set)

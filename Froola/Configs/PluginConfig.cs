@@ -63,6 +63,11 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
 
         ResultPath = Path.Combine(resultPath, $"{DateTime.Now:yyyyMMdd_HHmmss}_{PluginName}");
 
+        if (!Path.IsPathRooted(ResultPath))
+        {
+            ResultPath = Path.GetFullPath(ResultPath);
+        }
+
         if (string.IsNullOrWhiteSpace(PluginName))
         {
             throw new ArgumentException("PluginName must not be empty");
@@ -87,6 +92,8 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
         {
             throw new ArgumentException("PackagePlatforms must have at least one value");
         }
+
+
 
         return this;
     }

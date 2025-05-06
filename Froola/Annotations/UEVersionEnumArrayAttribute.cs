@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Froola.Annotations;
 
-public class EnumArrayAttribute(Type enumType) : ValidationAttribute
+public class UeVersionEnumArrayAttribute : ValidationAttribute
 {
     protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
     {
@@ -17,14 +17,14 @@ public class EnumArrayAttribute(Type enumType) : ValidationAttribute
         {
             foreach (var item in array)
             {
-                _ = Enum.Parse(enumType, item, true);
+                _ = UEVersionExtensions.Parse(item);
             }
         }
         catch (Exception e)
         {
             return new ValidationResult(e.Message);
         }
-        
+
 
         return ValidationResult.Success;
     }
