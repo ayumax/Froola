@@ -86,7 +86,7 @@ public class MacConfigTests
             .With(x => x.SshPassword, "password")
             .With(x => x.SshPrivateKeyPath, "/Users/test/.ssh/id_rsa")
             .With(x => x.SshPort, 22)
-            .With(x => x.XcodeNames, null as OptionDictionary<UEVersion, string>)
+            .With(x => x.XcodeNames, null as OptionDictionary<string, string>)
             .Create();
         var postConfigure = new MacConfigPostConfigure();
         // If validation for XcodeNames is implemented in MacConfigPostConfigure, this should throw. Otherwise, remove this test.
@@ -97,9 +97,9 @@ public class MacConfigTests
     [Fact]
     public void PostConfigure_DoesNotThrow_WhenAllRequiredPropertiesAreSet()
     {
-        var dict = new OptionDictionary<UEVersion, string>
+        var dict = new OptionDictionary<string, string>
         {
-            { UEVersionExtensions.Parse("5.4"), "/Applications/Xcode54.app" }
+            { "5.4", "/Applications/Xcode54.app" }
         };
         var config = _fixture.Build<MacConfig>()
             .With(x => x.SshUser, "testuser")

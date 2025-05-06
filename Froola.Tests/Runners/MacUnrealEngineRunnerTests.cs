@@ -90,7 +90,7 @@ public class MacUnrealEngineRunnerTests
         var runner = new MacUnrealEngineRunner(sshMock.Object);
         var result = await runner.SwitchXcode("/New/Xcode.app");
         Assert.Equal("/Applications/Xcode.app", result);
-        sshMock.Verify(s => s.SendCommand("xcode-select --switch '/New/Xcode.app'"), Times.Once);
+        sshMock.Verify(s => s.SendCommand("sudo xcode-select --switch '/New/Xcode.app'"), Times.Once);
     }
 
     [Fact]

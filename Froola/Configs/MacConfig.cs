@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Froola.Configs.Attributes;
 using Froola.Configs.Collections;
 using Microsoft.Extensions.Options;
@@ -40,18 +41,22 @@ public class MacConfig
     /// <summary>
     ///     Dictionary of Xcode file paths per Unreal Engine version (e.g. "/Applications/Xcode.app")
     /// </summary>
-    public OptionDictionary<UEVersion, string> XcodeNames { get; set; } = new()
+    public OptionDictionary<string, string> XcodeNames { get; set; } = new()
     {
     };
+
+    [JsonIgnore] public OptionDictionary<UEVersion, string> XcodeNamesWithVersion { get; set; } = new();
 }
 
 public class MacConfigPostConfigure : IPostConfigureOptions<MacConfig>
 {
     public void PostConfigure(string? name, MacConfig config)
     {
-        var section = ConfigHelper.GetSection<MacConfig>();
-        
-        // MacUnrealBasePath
-        // We can't check this path, because it is for Mac os
+        // XcodeNames
+        config.XcodeNamesWithVersion.Clear();
+        foreach (var (key, value) in config.XcodeNames)
+        {
+            config.XcodeNamesWithVersion.Add(UEVersionExtensions.Parse(key), value);
+        }
     }
 }

@@ -74,7 +74,7 @@ public class MacBuilder(
 
             var originalXcodePath = string.Empty;
             var xcodeSwitched = false;
-            if (_macConfig.XcodeNames.TryGetValue(engineVersion, out var xcodeName) &&
+            if (_macConfig.XcodeNamesWithVersion.TryGetValue(engineVersion, out var xcodeName) &&
                 !string.IsNullOrEmpty(xcodeName))
             {
                 logger.LogInformation($"Switching Xcode: {xcodeName}");

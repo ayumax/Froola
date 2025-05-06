@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AutoFixture;
@@ -25,10 +26,10 @@ public class AppConfigFileTests
         _fixture = new Fixture();
         _fixture.Customize(new AutoMoqCustomization());
         _fixture.Customize<MacConfig>(c => c
-            .With(x => x.XcodeNames, new OptionDictionary<UEVersion, string>
+            .With(x => x.XcodeNames, new OptionDictionary<string, string>
             {
-                [UEVersion.UE_5_5] = _fixture.Create<string>(),
-                [UEVersion.UE_5_4] = _fixture.Create<string>()
+                ["5.5"] = _fixture.Create<string>(),
+                ["5.4"] = _fixture.Create<string>()
             }));
         _fixture.Customize<PluginConfig>(c => c
             .With(x => x.RunTest, true)
@@ -90,7 +91,8 @@ public class AppConfigFileTests
                 var optionsInstance = dependencyResolver.Resolve(optionsType);
                 var valueProp = ConfigHelper.GetIOptionsValuePropertyInfo(configType);
                 var loadedConfig = valueProp.GetValue(optionsInstance);
-                foreach (var prop in configType.GetProperties())
+                foreach (var prop in configType.GetProperties()
+                             .Where(x => x.GetCustomAttribute<JsonIgnoreAttribute>() is null))
                 {
                     var expected = prop.GetValue(jsonObj[ConfigHelper.GetSection(configType)]);
                     var actual = prop.GetValue(loadedConfig);
