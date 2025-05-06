@@ -33,7 +33,7 @@ public class PluginCommand(
     private IFroolaLogger<PluginCommand> _logger = null!;
 
     public IContainerBuilder ContainerBuilder { get; set; } = new PluginContainerBuilder();
-    
+
     /// <summary>
     ///     Runs the plugin build, test, and packaging process.
     /// </summary>
@@ -41,6 +41,7 @@ public class PluginCommand(
     /// <param name="projectName">-p,Name of the project</param>
     /// <param name="gitRepositoryUrl">-u,URL of the git repository</param>
     /// <param name="gitBranch">-b,Branch of the git repository</param>
+    /// <param name="localRepositoryPath">-l,Path to the local repository</param>
     /// <param name="editorPlatforms">-e,Editor platforms</param>
     /// <param name="engineVersions">-v,Engine versions</param>
     /// <param name="resultPath">-o,Path to save results</param>
@@ -53,8 +54,9 @@ public class PluginCommand(
     public async Task Run(
         [Required] string pluginName,
         [Required] string projectName,
-        [Required] string gitRepositoryUrl,
-        [MinLength(1)] [Required] string gitBranch,
+        string? gitRepositoryUrl = null,
+        string? gitBranch = null,
+        string? localRepositoryPath = null,
         [EnumArray(typeof(EditorPlatform))] string[]? editorPlatforms = null,
         [EnumArray(typeof(UEVersion))] string[]? engineVersions = null,
         string? resultPath = null,
@@ -83,11 +85,12 @@ public class PluginCommand(
 
         _gitConfig = new GitConfig
         {
-            GitRepositoryUrl = gitRepositoryUrl,
-            GitBranch = gitBranch,
-            GitSshKeyPath = gitOptions.Value.GitSshKeyPath
+            GitRepositoryUrl = gitRepositoryUrl ?? gitOptions.Value.GitRepositoryUrl,
+            GitBranch = gitBranch ?? gitOptions.Value.GitBranch,
+            GitSshKeyPath = gitOptions.Value.GitSshKeyPath,
+            LocalRepositoryPath = localRepositoryPath ?? gitOptions.Value.LocalRepositoryPath
         }.Build();
-        
+
         var dependencyResolver = new DependencyResolver();
         dependencyResolver.BuildHostWithContainerBuilder(ContainerBuilder, _pluginConfig.ResultPath,
             [_pluginConfig, _gitConfig, windowsConfig.Value, macConfig.Value, linuxConfig.Value]);
@@ -189,25 +192,53 @@ public class PluginCommand(
     /// </summary>
     private async Task CloneGitRepository()
     {
-        _logger.LogInformation($"Preparing Git repositories from {_gitConfig.GitRepositoryUrl}");
+        if (string.IsNullOrWhiteSpace(_gitConfig.LocalRepositoryPath))
+        {
+            _logger.LogInformation($"Preparing Git repositories from {_gitConfig.GitRepositoryUrl}");
 
-        // First clone for Windows
-        if (!await _gitClient.CloneRepository(_gitConfig.GitRepositoryUrl, _gitConfig.GitBranch,
-                _baseRepoPath))
+            // First clone for Windows
+            if (!await _gitClient.CloneRepository(_gitConfig.GitRepositoryUrl, _gitConfig.GitBranch,
+                    _baseRepoPath))
+            {
+                _logger.LogError("Failed to clone repository for Windows");
+                throw new InvalidOperationException("Failed to clone repository for Windows");
+            }
+
+            var gitDirectory = Path.Combine(_baseRepoPath, ".git");
+            try
+            {
+                _fileSystem.RemoveReadOnlyAttribute(gitDirectory);
+                _fileSystem.DeleteDirectory(gitDirectory, true);
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning($"Warning: Could not delete directory {gitDirectory}: {e.Message}");
+            }
+        }
+        else if (_fileSystem.DirectoryExists(_gitConfig.LocalRepositoryPath))
         {
-            _logger.LogError("Failed to clone repository for Windows");
+            _logger.LogInformation($"Using local repository {_gitConfig.LocalRepositoryPath}");
+            
+            string[] directories = ["Source", "Content", "Config", "Plugins"];
+            foreach (var directory in directories)
+            {
+                _fileSystem.CopyDirectory(Path.Combine(_gitConfig.LocalRepositoryPath, directory),
+                    Path.Combine(_baseRepoPath, directory));
+            }
+
+            string[] files = [$"{_pluginConfig.ProjectName}.uproject"];
+            foreach (var file in files)
+            {
+                _fileSystem.FileCopy(Path.Combine(_gitConfig.LocalRepositoryPath, file),
+                    Path.Combine(_baseRepoPath, file), true);
+            }
+        }
+        else
+        {
+            _logger.LogError($"Local repository {_gitConfig.LocalRepositoryPath} does not exist");
+            throw new InvalidOperationException("Local repository does not exist");
         }
 
-        var gitDirectory = Path.Combine(_baseRepoPath, ".git");
-        try
-        {
-            _fileSystem.RemoveReadOnlyAttribute(gitDirectory);
-            _fileSystem.DeleteDirectory(gitDirectory, true);
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning($"Warning: Could not delete directory {gitDirectory}: {e.Message}");
-        }
     }
 
     /// <summary>
@@ -238,7 +269,7 @@ public class PluginCommand(
     private void OutputResults(Dictionary<UEVersion, BuildResult[]> buildResultsMap)
     {
         _logger.LogInformation("-------------------------------------------");
-        
+
         foreach (var (engineVersion, value) in buildResultsMap)
         {
             foreach (var buildResult in value)

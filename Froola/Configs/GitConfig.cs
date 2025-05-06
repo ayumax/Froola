@@ -1,5 +1,5 @@
 using System;
-using System.Text.Json.Serialization;
+using System.IO;
 using Froola.Configs.Attributes;
 using Froola.Interfaces;
 
@@ -26,18 +26,37 @@ public class GitConfig : IFroolaMergeConfig<GitConfig>
     /// </summary>
     public string GitSshKeyPath { get; set; } = string.Empty;
 
+    /// <summary>
+    ///     Path to the local repository
+    /// </summary>
+    /// <remarks>
+    ///     If this is specified, the local repo will use instead of git remote repository
+    /// </remarks>
+    public string LocalRepositoryPath { get; set; } = string.Empty;
+
     public GitConfig Build()
     {
-        // GitBranch
-        if (string.IsNullOrEmpty(GitBranch))
+        if (string.IsNullOrWhiteSpace(LocalRepositoryPath))
         {
-            throw new ArgumentException("GitBranch must not be null or empty");
-        }
+            // GitBranch
+            if (string.IsNullOrEmpty(GitBranch))
+            {
+                throw new ArgumentException("GitBranch must not be null or empty");
+            }
 
-        // GitRepositoryUrl
-        if (string.IsNullOrEmpty(GitRepositoryUrl))
+            // GitRepositoryUrl
+            if (string.IsNullOrEmpty(GitRepositoryUrl))
+            {
+                throw new ArgumentException("GitRepositoryUrl must not be null or empty");
+            }
+        }
+        else
         {
-            throw new ArgumentException("GitRepositoryUrl must not be null or empty");
+            // LocalRepositoryPath
+            if (!Directory.Exists(LocalRepositoryPath))
+            {
+                throw new ArgumentException("LocalRepositoryPath does not exist");
+            }
         }
 
         return this;

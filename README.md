@@ -142,17 +142,18 @@ Froola.exe init-config -o "path to save config template(*.json)"
 | Git.GitRepositoryUrl                 | string     | Git repository URL                             | "git@github.com:xxx/yyy.git"                 |
 | Git.GitBranch                        | string     | Branch name to checkout                            | "main"                                       |
 | Git.GitSshKeyPath                    | string     | GitHub SSH private key file path (※1)         | "C:\\Users\\user\\.ssh\\id_rsa"            |
-| InitConfig.OutputPath                | string     | appsettings.json template output path (※2)      | "C:\\FroolaConfig"                           |
+| Git.LocalRepositoryPath              | string     | Local repository path (※2)                     | "C:\\repo\\ue_plugin_project"                           |
+| InitConfig.OutputPath                | string     | appsettings.json template output path (※3)      | "C:\\FroolaConfig"                           |
 | Mac.MacUnrealBasePath                | string     | Mac Unreal Engine installation base path      | "/Users/Shared/Epic Games"                   |
 | Mac.SshUser                          | string     | Mac SSH username                                | "macuser"                                    |
 | Mac.SshPassword                      | string     | Mac SSH password (not required for public key authentication)   | "password"                                   |
 | Mac.SshPrivateKeyPath                | string     | Mac SSH private key path (required for public key authentication)     | "C:\\Users\\user\\.ssh\\id_rsa_mac"                   |
 | Mac.SshHost                          | string     | Mac IP address or hostname                   | "192.168.1.100"                              |
 | Mac.SshPort                          | int        | Mac SSH port number                              | 22                                            |
-| Mac.XcodeNames                       | Key-Value  | UE version-specific Xcode paths  (※3)                 | {"5.5":"/Applications/Xcode.app"}            |
+| Mac.XcodeNames                       | Key-Value  | UE version-specific Xcode paths  (※4)                 | {"5.5":"/Applications/Xcode.app"}            |
 | Plugin.EditorPlatforms               | array      | Editor platforms to use                            | ["Windows","Mac","Linux"]                   |
 | Plugin.EngineVersions                | array      | Unreal Engine versions to use                 | ["5.5"]                                      |
-| Plugin.ResultPath                    | string     | Result output directory (※4)                     | "C:\\UEPluginResults"                        |
+| Plugin.ResultPath                    | string     | Result output directory (※5)                     | "C:\\UEPluginResults"                        |
 | Plugin.RunTest                       | bool       | Run tests                                       | true                                          |
 | Plugin.RunPackage                    | bool       | Run packaging                                   | true                                          |
 | Plugin.PackagePlatforms              | array      | Packaging platforms to use                     | ["Win64","Mac","Linux","Android","IOS"]     |
@@ -161,9 +162,10 @@ Froola.exe init-config -o "path to save config template(*.json)"
 | Linux.DockerImage                    | string     | Docker image (%v will be replaced with UE version)      | "ghcr.io/epicgames/unreal-engine:dev-slim-%v" |
 
 ※1 If Git.GitSshKeyPath is not set, HTTPS will be used for cloning.
-※2 If InitConfig.OutputPath is not set or empty, the current directory will be used for output.
-※3 Set UE version-specific Xcode paths if you need to use different Xcode versions for different UE versions.
-※4 If Plugin.ResultPath is not set or empty, the "outputs" directory in the same directory as Froola.exe will be used for output.
+※2 If Git.LocalRepositoryPath is set, the specified directory will be used base repository path. if so the remote repository will not be cloned.
+※3 If InitConfig.OutputPath is not set or empty, the current directory will be used for output.
+※4 Set UE version-specific Xcode paths if you need to use different Xcode versions for different UE versions.
+※5 If Plugin.ResultPath is not set or empty, the "outputs" directory in the same directory as Froola.exe will be used for output.
 
 ## Usage
 
@@ -185,8 +187,9 @@ This command will execute the build and packaging process based on the settings 
 |------------------------------|------------|--------------------------------------------------|
 | -n, --plugin-name            | string     | Plugin name (required)                             |
 | -p, --project-name           | string     | Project name (required)                           |
-| -u, --git-repository-url     | string     | Git repository URL (required)                         |
-| -b, --git-branch             | string     | Branch name (required)                               |
+| -u, --git-repository-url     | string     | Git repository URL                         |
+| -b, --git-branch             | string     | Branch name                               |
+| -l, --local-repository-path  | string     | Local repository path                               |
 | -e, --editor-platforms       | string[]?  | Editor platforms (e.g., Windows, Mac, Linux)|
 | -v, --engine-versions        | string[]?  | Unreal Engine versions (e.g., 5.3, 5.4, 5.5)     |
 | -o, --result-path            | string?    | Result output directory                                       |
@@ -200,7 +203,7 @@ This command will execute the build and packaging process based on the settings 
 ※Array notation is ["Windows","Mac","Linux"].
 
 ### plugin Command Execution Flow
-1. Clone the specified Git repository to the Windows platform.
+1. Clone the specified Git repository to the Windows platform.(if `--local-repository-path` is not set)
 2. Copy the cloned directory to each platform.
 3. Execute the build, test, and packaging process for each platform.
 4. Save the results in the `results` directory.
