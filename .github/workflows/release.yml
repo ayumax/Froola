@@ -103,22 +103,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $prev = '${{ steps.prev_tag.outputs.tag }}'
-          # If there is no previous tag, get all merged PRs to main
-          if ([string]::IsNullOrEmpty($prev)) {
-            gh pr list --state merged --base main --json title,number --jq '.[] | "- #\(.number) \(.title)"' > pr_titles.txt
+          $prev = "${{ steps.prev_tag.outputs.tag }}"
+          $outputFile = "pr_titles.txt"
+          
+          # Execute the external script to generate changelog
+          $scriptOutput = ./.github/scripts/get-changelog.ps1 -PreviousTag $prev -OutputFile $outputFile
+          
+          # Read the changelog content
+          if (Test-Path $outputFile) {
+            $changelog = Get-Content $outputFile | Out-String
           } else {
-            # Get previous tag commit date in ISO8601 format
-            $since = git show -s --format=%cI $prev
-            gh pr list --state merged --base main --search "+merged:>=$since" --json title,number --jq '.[] | "- #\(.number) \(.title)"' > pr_titles.txt
+            $changelog = "No changes found in this release."
           }
-          # Read PR titles if file exists, otherwise set changelog to empty
-          if (Test-Path pr_titles.txt) {
-            $changelog = Get-Content pr_titles.txt | Out-String
-          } else {
-            Write-Warning "No PR titles file found. Setting changelog to empty."
-            $changelog = ""
-          }
+          
           echo "log<<EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           echo $changelog | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           echo "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
