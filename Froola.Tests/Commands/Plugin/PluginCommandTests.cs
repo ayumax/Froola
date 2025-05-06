@@ -17,42 +17,52 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
         // Normal case
         new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", "main",
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
             new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
         },
         // PluginName is empty (Abnormal case)
-        new object[]
+        new object?[]
         {
-            "", "TestProject", "https://example.com/repo.git", "main",
+            string.Empty, "TestProject", "https://example.com/repo.git", "main", string.Empty,
             new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" },
             typeof(ArgumentException)
         },
-        // GitBranch is empty (Abnormal case)
-        new object[]
+        // GitBranch is empty (Should NOT throw after change)
+        new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", "",
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" },
-            typeof(ArgumentException)
+            "TestPlugin", "TestProject", "https://example.com/repo.git", string.Empty, Directory.GetCurrentDirectory(),
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
+        },
+        // gitRepositoryUrl is null (Should NOT throw)
+        new object?[]
+        {
+            "TestPlugin", "TestProject", null, "main", Directory.GetCurrentDirectory(),
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
+        },
+        // gitBranch is null (Should NOT throw)
+        new object?[]
+        {
+            "TestPlugin", "TestProject", "https://example.com/repo.git", null, Directory.GetCurrentDirectory(),
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
         },
         // EditorPlatforms is empty (Abnormal case)
-        new object[]
+        new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", "main",
-            Array.Empty<string>(), new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" },
-            typeof(ArgumentException)
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
+            new string[] { }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, typeof(ArgumentException)
         },
         // EngineVersions is empty (Abnormal case)
-        new object[]
+        new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", "main",
-            new[] { "Windows" }, Array.Empty<string>(), "test_outputs", true, true, new[] { "Win64" },
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
+            new[] { "Windows" }, new string[] { }, "test_outputs", true, true, new[] { "Win64" },
             typeof(ArgumentException)
         },
         // PackagePlatforms is empty (Abnormal case)
-        new object[]
+        new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", "main",
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, Array.Empty<string>(),
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new string[] { },
             typeof(ArgumentException)
         }
     };
@@ -60,7 +70,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
     [Theory]
     [MemberData(nameof(RunTestCases))]
     public async Task Run_MergesConfigAndArgs_Variations(
-        string pluginName, string projectName, string gitRepositoryUrl, string gitBranch,
+        string pluginName, string projectName, string? gitRepositoryUrl, string? gitBranch, string? localRepoPath,
         string[] editorPlatforms, string[] engineVersions, string resultPath,
         bool runTest, bool runPackage, string[] packagePlatforms, Type? expectedException)
     {
@@ -77,13 +87,21 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
         };
         var gitConfig = new GitConfig
         {
-            GitRepositoryUrl = gitRepositoryUrl,
-            GitBranch = gitBranch,
-            GitSshKeyPath = ""
+            GitRepositoryUrl = gitRepositoryUrl ?? string.Empty,
+            GitBranch = gitBranch ?? string.Empty,
+            GitSshKeyPath = "",
+            LocalRepositoryPath = localRepoPath ?? string.Empty
         };
         var windowsConfig = new WindowsConfig { WindowsUnrealBasePath = @"C:\Program Files\Epic Games" };
         var macConfig = new MacConfig();
-var linuxConfig = new LinuxConfig();
+        var linuxConfig = new LinuxConfig();
+
+        var gitMock = new Mock<IGitClient>();
+        gitMock.Setup(x => x.CloneRepository(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.FromResult(true));
+
+        var fileSystemMock = new Mock<IFileSystem>();
+        fileSystemMock.Setup(x => x.DirectoryExists(Directory.GetCurrentDirectory())).Returns(true);
 
         var mockContainerBuilder = new Mock<IContainerBuilder>();
         mockContainerBuilder.Setup(x => x.Register(It.IsAny<IServiceCollection>()))
@@ -93,8 +111,8 @@ var linuxConfig = new LinuxConfig();
                 services.AddSingleton<IFroolaLogger, TestFroolaLogger>();
                 services.AddSingleton(typeof(IFroolaLogger<>), typeof(FroolaLogger<>));
                 services.AddSingleton(typeof(IConfigJsonExporter), new Mock<IConfigJsonExporter>().Object);
-                services.AddSingleton(typeof(IGitClient), new Mock<IGitClient>().Object);
-                services.AddSingleton(typeof(IFileSystem), new Mock<IFileSystem>().Object);
+                services.AddSingleton(typeof(IGitClient), gitMock.Object);
+                services.AddSingleton(typeof(IFileSystem), fileSystemMock.Object);
             });
 
         var pluginOptions = Mock.Of<IOptions<PluginConfig>>(o => o.Value == pluginConfig);
@@ -103,7 +121,7 @@ var linuxConfig = new LinuxConfig();
         var macOptions = Mock.Of<IOptions<MacConfig>>(o => o.Value == macConfig);
 
         var linuxOptions = Mock.Of<IOptions<LinuxConfig>>(o => o.Value == linuxConfig);
-var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOptions, linuxOptions)
+        var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOptions, linuxOptions)
         {
             ContainerBuilder = mockContainerBuilder.Object
         };
@@ -111,15 +129,30 @@ var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOp
         if (expectedException == null)
         {
             await command.Run(
-                pluginName, projectName, gitRepositoryUrl, gitBranch,
-                editorPlatforms, engineVersions, resultPath, runTest, runPackage, packagePlatforms
+                pluginName,
+                projectName,
+                gitRepositoryUrl,
+                gitBranch,
+                localRepoPath,
+                editorPlatforms,
+                engineVersions,
+                resultPath,
+                runTest,
+                runPackage,
+                packagePlatforms
             );
         }
         else
         {
             await Assert.ThrowsAsync(expectedException, () => command.Run(
                 pluginName, projectName, gitRepositoryUrl, gitBranch,
-                editorPlatforms, engineVersions, resultPath, runTest, runPackage, packagePlatforms
+                localRepoPath,
+                editorPlatforms,
+                engineVersions,
+                resultPath,
+                runTest,
+                runPackage,
+                packagePlatforms
             ));
         }
     }
@@ -143,12 +176,17 @@ var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOp
         {
             GitRepositoryUrl = "https://example.com/repo.git",
             GitBranch = "main",
-            GitSshKeyPath = ""
+            GitSshKeyPath = "",
+            LocalRepositoryPath = string.Empty
         };
         var windowsConfig = new WindowsConfig { WindowsUnrealBasePath = @"C:\Program Files\Epic Games" };
         var macConfig = new MacConfig();
-var linuxConfig = new LinuxConfig();
+        var linuxConfig = new LinuxConfig();
 
+        var gitMock = new Mock<IGitClient>();
+        gitMock.Setup(x => x.CloneRepository(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.FromResult(true));
+        
         var mockContainerBuilder = new Mock<IContainerBuilder>();
         mockContainerBuilder.Setup(x => x.Register(It.IsAny<IServiceCollection>()))
             .Callback<IServiceCollection>(services =>
@@ -157,7 +195,7 @@ var linuxConfig = new LinuxConfig();
                 services.AddSingleton<IFroolaLogger, TestFroolaLogger>();
                 services.AddSingleton(typeof(IFroolaLogger<>), typeof(FroolaLogger<>));
                 services.AddSingleton(typeof(IConfigJsonExporter), new Mock<IConfigJsonExporter>().Object);
-                services.AddSingleton(typeof(IGitClient), new Mock<IGitClient>().Object);
+                services.AddSingleton(typeof(IGitClient), gitMock.Object);
                 services.AddSingleton(typeof(IFileSystem), new Mock<IFileSystem>().Object);
             });
 
@@ -167,7 +205,7 @@ var linuxConfig = new LinuxConfig();
         var macOptions = Mock.Of<IOptions<MacConfig>>(o => o.Value == macConfig);
 
         var linuxOptions = Mock.Of<IOptions<LinuxConfig>>(o => o.Value == linuxConfig);
-var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOptions, linuxOptions)
+        var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOptions, linuxOptions)
         {
             ContainerBuilder = mockContainerBuilder.Object
         };
@@ -178,9 +216,10 @@ var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOp
             pluginConfig.ProjectName,
             gitConfig.GitRepositoryUrl,
             gitConfig.GitBranch,
+            gitConfig.LocalRepositoryPath,
             ["Windows"],
             ["5.3"],
-            pluginConfig.ResultPath,
+            pluginConfig.ResultPath,    
             pluginConfig.RunTest,
             pluginConfig.RunPackage,
             ["Win64"]
@@ -206,11 +245,12 @@ var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOp
         {
             GitRepositoryUrl = "https://example.com/repo.git",
             GitBranch = "main",
-            GitSshKeyPath = ""
+            GitSshKeyPath = "",
+            LocalRepositoryPath = string.Empty
         };
         var windowsConfig = new WindowsConfig { WindowsUnrealBasePath = @"C:\Program Files\Epic Games" };
         var macConfig = new MacConfig();
-var linuxConfig = new LinuxConfig();
+        var linuxConfig = new LinuxConfig();
 
         var mockContainerBuilder = new Mock<IContainerBuilder>();
         mockContainerBuilder.Setup(x => x.Register(It.IsAny<IServiceCollection>()))
@@ -230,7 +270,7 @@ var linuxConfig = new LinuxConfig();
         var macOptions = Mock.Of<IOptions<MacConfig>>(o => o.Value == macConfig);
 
         var linuxOptions = Mock.Of<IOptions<LinuxConfig>>(o => o.Value == linuxConfig);
-var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOptions, linuxOptions)
+        var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOptions, linuxOptions)
         {
             ContainerBuilder = mockContainerBuilder.Object
         };
@@ -241,6 +281,7 @@ var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOp
             pluginConfig.ProjectName,
             gitConfig.GitRepositoryUrl,
             gitConfig.GitBranch,
+            gitConfig.LocalRepositoryPath,
             ["Windows"],
             ["5.3"],
             pluginConfig.ResultPath,
@@ -269,11 +310,12 @@ var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOp
         {
             GitRepositoryUrl = "https://example.com/repo.git",
             GitBranch = "", // Abnormal case
-            GitSshKeyPath = ""
+            GitSshKeyPath = "",
+            LocalRepositoryPath = string.Empty
         };
         var windowsConfig = new WindowsConfig { WindowsUnrealBasePath = @"C:\Program Files\Epic Games" };
         var macConfig = new MacConfig();
-var linuxConfig = new LinuxConfig();
+        var linuxConfig = new LinuxConfig();
 
         var mockContainerBuilder = new Mock<IContainerBuilder>();
         mockContainerBuilder.Setup(x => x.Register(It.IsAny<IServiceCollection>()))
@@ -293,7 +335,7 @@ var linuxConfig = new LinuxConfig();
         var macOptions = Mock.Of<IOptions<MacConfig>>(o => o.Value == macConfig);
 
         var linuxOptions = Mock.Of<IOptions<LinuxConfig>>(o => o.Value == linuxConfig);
-var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOptions, linuxOptions)
+        var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOptions, linuxOptions)
         {
             ContainerBuilder = mockContainerBuilder.Object
         };
@@ -304,6 +346,7 @@ var command = new PluginCommand(pluginOptions, gitOptions, windowsOptions, macOp
             pluginConfig.ProjectName,
             gitConfig.GitRepositoryUrl,
             gitConfig.GitBranch,
+            gitConfig.LocalRepositoryPath,
             ["Windows"],
             ["5.3"],
             pluginConfig.ResultPath,
