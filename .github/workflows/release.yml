@@ -81,18 +81,12 @@ jobs:
         shell: pwsh
         run: |
           git fetch --tags
-          # Get tag list as array to count correctly
-          $tags = git tag --sort=-creatordate | Where-Object { $_ -ne "" }
-          $tagList = $tags -split "`n"
-          if ($tagList.Count -le 1) {
+          $tags = git tag --merged main --sort=-creatordate
+          if ($tags.Count -le 1) {
             Write-Warning "Only one or no tag exists. No previous tag will be set."
             $prev = ""
           } else {
-            $prev = git describe --tags --abbrev=0 HEAD^ 2>$null
-            if ($LASTEXITCODE -ne 0) {
-              Write-Warning "Failed to get previous tag using HEAD^, setting previous tag to empty."
-              $prev = ""
-            }
+            $prev = $tags[1]
           }
           echo "tag=$prev" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           exit 0
