@@ -18,52 +18,60 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
         new object?[]
         {
             "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            true, false // IsZipped, KeepBinaryDirectory
         },
         // PluginName is empty (Abnormal case)
         new object?[]
         {
             string.Empty, "TestProject", "https://example.com/repo.git", "main", string.Empty,
             new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" },
-            typeof(ArgumentException)
+            typeof(ArgumentException),
+            true, false
         },
         // GitBranch is empty (Should NOT throw after change)
         new object?[]
         {
             "TestPlugin", "TestProject", "https://example.com/repo.git", string.Empty, Directory.GetCurrentDirectory(),
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            false, true
         },
         // gitRepositoryUrl is null (Should NOT throw)
         new object?[]
         {
             "TestPlugin", "TestProject", null, "main", Directory.GetCurrentDirectory(),
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            false, false
         },
         // gitBranch is null (Should NOT throw)
         new object?[]
         {
             "TestPlugin", "TestProject", "https://example.com/repo.git", null, Directory.GetCurrentDirectory(),
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            true, true
         },
         // EditorPlatforms is empty (Abnormal case)
         new object?[]
         {
             "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
-            new string[] { }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, typeof(ArgumentException)
+            new string[] { }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, typeof(ArgumentException),
+            true, false
         },
         // EngineVersions is empty (Abnormal case)
         new object?[]
         {
             "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
             new[] { "Windows" }, new string[] { }, "test_outputs", true, true, new[] { "Win64" },
-            typeof(ArgumentException)
+            typeof(ArgumentException),
+            false, false
         },
         // PackagePlatforms is empty (Abnormal case)
         new object?[]
         {
             "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
             new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new string[] { },
-            typeof(ArgumentException)
+            typeof(ArgumentException),
+            true, true
         }
     };
 
@@ -72,7 +80,8 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
     public async Task Run_MergesConfigAndArgs_Variations(
         string pluginName, string projectName, string? gitRepositoryUrl, string? gitBranch, string? localRepoPath,
         string[] editorPlatforms, string[] engineVersions, string resultPath,
-        bool runTest, bool runPackage, string[] packagePlatforms, Type? expectedException)
+        bool runTest, bool runPackage, string[] packagePlatforms, Type? expectedException,
+        bool isZipped, bool keepBinaryDirectory)
     {
         var pluginConfig = new PluginConfig
         {
@@ -83,7 +92,9 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             ResultPath = resultPath,
             RunTest = runTest,
             RunPackage = runPackage,
-            PackagePlatforms = new OptionList<GamePlatform>(packagePlatforms.Select(Enum.Parse<GamePlatform>))
+            PackagePlatforms = new OptionList<GamePlatform>(packagePlatforms.Select(Enum.Parse<GamePlatform>)),
+            IsZipped = isZipped,
+            KeepBinaryDirectory = keepBinaryDirectory
         };
         var gitConfig = new GitConfig
         {
@@ -141,6 +152,9 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
                 runPackage,
                 packagePlatforms
             );
+            // Assert values after run
+            Assert.Equal(isZipped, pluginConfig.IsZipped);
+            Assert.Equal(keepBinaryDirectory, pluginConfig.KeepBinaryDirectory);
         }
         else
         {
@@ -154,6 +168,9 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
                 runPackage,
                 packagePlatforms
             ));
+            // Assert values even if exception
+            Assert.Equal(isZipped, pluginConfig.IsZipped);
+            Assert.Equal(keepBinaryDirectory, pluginConfig.KeepBinaryDirectory);
         }
     }
 

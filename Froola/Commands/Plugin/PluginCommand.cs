@@ -50,6 +50,8 @@ public class PluginCommand(
     /// <param name="runTest">-t,Run tests</param>
     /// <param name="runPackage">-c,Run packaging</param>
     /// <param name="packagePlatforms">-g,Game platforms</param>
+    /// <param name="keepBinaryDirectory">d,Exclude the binary directory.</param>
+    /// <param name="isZipped">z,Create a zip archive of the release directory</param>
     /// <param name="cancellationToken">token for cancellation</param>
     [Command("plugin")]
     [SuppressMessage("ReSharper", "ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator")]
@@ -65,6 +67,8 @@ public class PluginCommand(
         bool? runTest = null,
         bool? runPackage = null,
         [EnumArray(typeof(GamePlatform))] string[]? packagePlatforms = null,
+        bool? keepBinaryDirectory = null,
+        bool? isZipped = null,
         CancellationToken cancellationToken = default)
     {
         _pluginConfig = new PluginConfig
@@ -84,7 +88,9 @@ public class PluginCommand(
             PackagePlatforms = packagePlatforms is null
                 ? configOptions.Value.PackagePlatforms
                 : new OptionList<GamePlatform>(
-                    packagePlatforms.Select(x => Enum.Parse<GamePlatform>(x, true)).ToArray())
+                    packagePlatforms.Select(x => Enum.Parse<GamePlatform>(x, true)).ToArray()),
+            KeepBinaryDirectory = keepBinaryDirectory ?? configOptions.Value.KeepBinaryDirectory,
+            IsZipped = isZipped ?? configOptions.Value.IsZipped
         }.Build();
 
         _gitConfig = new GitConfig
