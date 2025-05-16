@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Reflection;
 using Froola.Configs.Attributes;
 using Froola.Configs.Collections;
 using Froola.Interfaces;
@@ -55,6 +54,16 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
     /// </summary>
     public OptionList<GamePlatform> PackagePlatforms { get; set; } = [];
 
+    /// <summary>
+    ///     Indicates whether the plugin output should be compressed into a zip file.
+    /// </summary>
+    public bool IsZipped { get; set; } = true;
+
+    /// <summary>
+    ///     Whether to keep the Binary directory after the operation.
+    /// </summary>
+    public bool KeepBinaryDirectory { get; set; } = false;
+
     public PluginConfig Build()
     {
         var resultPath = string.IsNullOrEmpty(ResultPath)
@@ -92,8 +101,6 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
         {
             throw new ArgumentException("PackagePlatforms must have at least one value");
         }
-
-
 
         return this;
     }

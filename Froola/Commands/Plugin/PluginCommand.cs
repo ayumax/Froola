@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ConsoleAppFramework;
@@ -326,6 +328,13 @@ public class PluginCommand(
             {
                 _fileSystem.CopyDirectory(platformPackageDir, mergedDir);
                 isFirst = false;
+
+                if (!_pluginConfig.KeepBinaryDirectory)
+                {
+                    _fileSystem.DeleteDirectory(Path.Combine(mergedDir, "Binaries"), true);
+                    _fileSystem.DeleteDirectory(Path.Combine(mergedDir, "Intermediate"), true);
+                    break;
+                }
             }
             else
             {
@@ -334,7 +343,53 @@ public class PluginCommand(
             }
         }
 
+        if (ZipDirectory(mergedDir, engineVersion))
+        {
+            _fileSystem.DeleteDirectory(mergedDir, true);
+        }
+        
         _logger.LogInformation($"Merged directory created for {engineVersion.ToFullVersionString()} : {mergedDir}");
+    }
+
+    private bool ZipDirectory(string sourceDirectory, UEVersion engineVersion)
+    {
+        if (!_pluginConfig.IsZipped || !_fileSystem.DirectoryExists(sourceDirectory))
+        {
+            return false;
+        }
+
+        var zipFileName =
+            $"{_pluginConfig.PluginName}_{GetPluginVersion(sourceDirectory)}_{engineVersion.ToFullVersionString()}.zip";
+        var zipFilePath = Path.Combine(_pluginConfig.ResultPath, "release", zipFileName);
+
+        _logger.LogInformation($"Creating zip file: {zipFilePath}");
+
+        if (_fileSystem.FileExists(zipFilePath))
+        {
+            _fileSystem.DeleteFile(zipFilePath);
+        }
+
+        ZipFile.CreateFromDirectory(sourceDirectory, zipFilePath);
+
+        _logger.LogInformation($"Zip file created: {zipFilePath}");
+
+        return true;
+    }
+
+    private string GetPluginVersion(string sourceDirectory)
+    {
+        var pluginVersionFilePath = Path.Combine(sourceDirectory, $"{_pluginConfig.PluginName}.uplugin");
+
+        if (!_fileSystem.FileExists(pluginVersionFilePath))
+        {
+            return "0_0_0";
+        }
+
+        var jsonText = _fileSystem.ReadAllText(pluginVersionFilePath);
+        var jsonObject = JsonDocument.Parse(jsonText);
+        var pluginVersion = jsonObject.RootElement.GetProperty("VersionName").GetString() ?? "0.0.0";
+
+        return pluginVersion.Replace('.', '_').Trim();
     }
 
     private async Task OutputSettings(IConfigJsonExporter configJsonExporter)
