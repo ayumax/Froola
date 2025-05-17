@@ -87,7 +87,7 @@ public class WindowsBuilder(
     /// <inheritdoc cref="IBuilder" />
     public override Task PrepareRepository(string baseRepositoryPath, UEVersion engineVersion)
     {
-        RepositoryPath = Path.Combine(baseRepositoryPath, "..", "Windows", engineVersion.ToVersionString());
+        RepositoryPath = Path.Combine(baseRepositoryPath, "..", "Windows");
 
         _fileSystem.CopyDirectory(baseRepositoryPath, RepositoryPath);
 

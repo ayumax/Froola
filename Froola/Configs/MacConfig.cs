@@ -41,7 +41,7 @@ public class MacConfig
     /// <summary>
     ///     Dictionary of Xcode file paths per Unreal Engine version (e.g. "/Applications/Xcode.app")
     /// </summary>
-    public OptionDictionary<string, string> XcodeNames { get; set; } = new()
+    public OptionDictionary XcodeNames { get; set; } = new()
     {
     };
 

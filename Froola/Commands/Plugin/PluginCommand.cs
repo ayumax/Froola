@@ -30,8 +30,6 @@ public class PluginCommand(
     private IGitClient _gitClient = null!;
     private IFileSystem _fileSystem = null!;
 
-    private string _baseRepoPath = string.Empty;
-
     private IFroolaLogger<PluginCommand> _logger = null!;
 
     public IContainerBuilder ContainerBuilder { get; set; } = new PluginContainerBuilder();
@@ -43,6 +41,7 @@ public class PluginCommand(
     /// <param name="projectName">-p,Name of the project</param>
     /// <param name="gitRepositoryUrl">-u,URL of the git repository</param>
     /// <param name="gitBranch">-b,Branch of the git repository</param>
+    /// <param name="gitBranches">g,Branches of the git repository(format version:branch)</param>
     /// <param name="localRepositoryPath">-l,Path to the local repository</param>
     /// <param name="editorPlatforms">-e,Editor platforms</param>
     /// <param name="engineVersions">-v,Engine versions</param>
@@ -60,6 +59,7 @@ public class PluginCommand(
         [Required] string projectName,
         string? gitRepositoryUrl = null,
         string? gitBranch = null,
+        string[]? gitBranches = null,
         string? localRepositoryPath = null,
         [EnumArray(typeof(EditorPlatform))] string[]? editorPlatforms = null,
         [UeVersionEnumArray] string[]? engineVersions = null,
@@ -97,6 +97,13 @@ public class PluginCommand(
         {
             GitRepositoryUrl = gitRepositoryUrl ?? gitOptions.Value.GitRepositoryUrl,
             GitBranch = gitBranch ?? gitOptions.Value.GitBranch,
+            GitBranches = gitBranches is null
+                ? gitOptions.Value.GitBranches
+                : new OptionDictionary(gitBranches.Select(x =>
+                {
+                    var split = x.Split(':');
+                    return split.Length == 2 ? new KeyValuePair<string, string>(split[0], split[1]) : default;
+                })),
             GitSshKeyPath = gitOptions.Value.GitSshKeyPath,
             LocalRepositoryPath = localRepositoryPath ?? gitOptions.Value.LocalRepositoryPath
         }.Build();
@@ -114,9 +121,7 @@ public class PluginCommand(
 
         _fileSystem = dependencyResolver.Resolve<IFileSystem>();
 
-        CreateWorkingRepositoryDirectory();
-
-        await CloneGitRepository();
+        var repoPath = CreateWorkingRepositoryDirectory();
 
         var buildResultsMap = new Dictionary<UEVersion, BuildResult[]>();
         foreach (var engineVersion in _pluginConfig.EngineVersions)
@@ -126,6 +131,8 @@ public class PluginCommand(
                 _logger.LogWarning("Stopped plugin tasks due to cancellation.");
                 break;
             }
+
+            var baseRepoPath = await CloneGitRepository(engineVersion, repoPath);
 
             var tasks = new List<Task<BuildResult>>();
             var builders = dependencyResolver.Resolve<IEnumerable<IBuilder>>().ToArray();
@@ -145,7 +152,8 @@ public class PluginCommand(
                     _logger.LogWarning($"No builder found for {editorPlatform}");
                     continue;
                 }
-                await builder.PrepareRepository(_baseRepoPath, engineVersion);
+
+                await builder.PrepareRepository(baseRepoPath, engineVersion);
                 builder.InitDirectory(engineVersion);
                 tasks.Add(builder.Run(engineVersion));
             }
@@ -163,7 +171,7 @@ public class PluginCommand(
         }
 
         // Clean up temporary directory
-        CleanupClonedDirectory();
+        CleanupClonedDirectory(repoPath);
 
         OutputResults(buildResultsMap);
 
@@ -171,7 +179,7 @@ public class PluginCommand(
         _logger.LogInformation($"All tasks finished. Check {_pluginConfig.ResultPath} for details.");
     }
 
-    private void CreateWorkingRepositoryDirectory()
+    private string CreateWorkingRepositoryDirectory()
     {
         // Create a timestamp folder (year-month-day-hour-minute-second)
         var tempBase = Path.Combine(Path.GetTempPath(), "Froola", _pluginConfig.PluginName);
@@ -188,33 +196,38 @@ public class PluginCommand(
         }
 
         var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
-        _baseRepoPath = Path.Combine(tempBase, timestamp, "base");
+        var repoPath = Path.Combine(tempBase, timestamp);
 
         // Create a results directory if it doesn't exist
-        if (!_fileSystem.DirectoryExists(_baseRepoPath))
+        if (!_fileSystem.DirectoryExists(repoPath))
         {
-            _fileSystem.CreateDirectory(_baseRepoPath);
+            _fileSystem.CreateDirectory(repoPath);
         }
+
+        return repoPath;
     }
 
     /// <summary>
     ///     Prepares temporary Git repositories for each target OS.
     /// </summary>
-    private async Task CloneGitRepository()
+    private async Task<string> CloneGitRepository(UEVersion ueVersion, string repoPath)
     {
+        var baseRepoPath = Path.Combine(repoPath, ueVersion.ToString(), "base");
+        
         if (string.IsNullOrWhiteSpace(_gitConfig.LocalRepositoryPath))
         {
             _logger.LogInformation($"Preparing Git repositories from {_gitConfig.GitRepositoryUrl}");
 
             // First clone for Windows
-            if (!await _gitClient.CloneRepository(_gitConfig.GitRepositoryUrl, _gitConfig.GitBranch,
-                    _baseRepoPath))
+            if (!await _gitClient.CloneRepository(_gitConfig.GitRepositoryUrl,
+                    _gitConfig.GitBranchesWithVersion.GetValueOrDefault(ueVersion, _gitConfig.GitBranch),
+                    baseRepoPath))
             {
                 _logger.LogError("Failed to clone repository for Windows");
                 throw new InvalidOperationException("Failed to clone repository for Windows");
             }
 
-            var gitDirectory = Path.Combine(_baseRepoPath, ".git");
+            var gitDirectory = Path.Combine(baseRepoPath, ".git");
             try
             {
                 _fileSystem.RemoveReadOnlyAttribute(gitDirectory);
@@ -233,14 +246,14 @@ public class PluginCommand(
             foreach (var directory in directories)
             {
                 _fileSystem.CopyDirectory(Path.Combine(_gitConfig.LocalRepositoryPath, directory),
-                    Path.Combine(_baseRepoPath, directory));
+                    Path.Combine(baseRepoPath, directory));
             }
 
             string[] files = [$"{_pluginConfig.ProjectName}.uproject"];
             foreach (var file in files)
             {
                 _fileSystem.FileCopy(Path.Combine(_gitConfig.LocalRepositoryPath, file),
-                    Path.Combine(_baseRepoPath, file), true);
+                    Path.Combine(baseRepoPath, file), true);
             }
         }
         else
@@ -249,23 +262,24 @@ public class PluginCommand(
             throw new InvalidOperationException("Local repository does not exist");
         }
 
+        return baseRepoPath;
     }
 
     /// <summary>
     ///     Cleans up temporary directories used during the build process.
     /// </summary>
-    private void CleanupClonedDirectory()
+    private void CleanupClonedDirectory(string repoPath)
     {
-        if (!_fileSystem.DirectoryExists(_baseRepoPath))
+        if (!_fileSystem.DirectoryExists(repoPath))
         {
             return;
         }
 
-        _logger.LogInformation($"Cleaning up temporary directory for : {_baseRepoPath}");
+        _logger.LogInformation($"Cleaning up temporary directory for : {repoPath}");
 
         try
         {
-            _fileSystem.DeleteDirectory(_baseRepoPath, true);
+            _fileSystem.DeleteDirectory(repoPath, true);
         }
         catch (Exception ex)
         {
