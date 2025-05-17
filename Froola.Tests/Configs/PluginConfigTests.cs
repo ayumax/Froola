@@ -125,4 +125,29 @@ public class PluginConfigTests
 
         Assert.Throws<ArgumentException>(() => config.Build());
     }
+
+    [Fact]
+    public void Build_Keeps_IsZipped_And_KeepBinaryDirectory_Value()
+    {
+        var config = _fixture.Build<PluginConfig>()
+            .With(x => x.PluginName, "TestPlugin")
+            .With(x => x.ProjectName, "TestProject")
+            .With(x => x.IsZipped, false)
+            .With(x => x.KeepBinaryDirectory, true)
+            .Create();
+        SetupValidPluginConfigCollections(config);
+
+        var built = config.Build();
+
+        Assert.False(built.IsZipped);
+        Assert.True(built.KeepBinaryDirectory);
+    }
+
+    [Fact]
+    public void Default_IsZipped_And_KeepBinaryDirectory_Are_Correct()
+    {
+        var config = new PluginConfig();
+        Assert.True(config.IsZipped);
+        Assert.False(config.KeepBinaryDirectory);
+    }
 }

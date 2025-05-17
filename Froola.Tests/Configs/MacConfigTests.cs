@@ -97,7 +97,7 @@ public class MacConfigTests
     [Fact]
     public void PostConfigure_DoesNotThrow_WhenAllRequiredPropertiesAreSet()
     {
-        var dict = new OptionDictionary<string, string>
+        var dict = new OptionDictionary
         {
             { "5.4", "/Applications/Xcode54.app" }
         };

@@ -17,62 +17,95 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
         // Normal case
         new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", null, string.Empty,
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            true, false // IsZipped, KeepBinaryDirectory
+        },
+        // With GitBranches
+        new object?[]
+        {
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", 
+            new[] { "5.3:UE5.3", "5.2:UE5.2" }, string.Empty,
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            true, false
+        },
+        // With GitBranches and empty GitBranch
+        new object?[]
+        {
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "", 
+            new[] { "5.3:UE5.3" }, string.Empty,
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            true, false
         },
         // PluginName is empty (Abnormal case)
         new object?[]
         {
-            string.Empty, "TestProject", "https://example.com/repo.git", "main", string.Empty,
+            string.Empty, "TestProject", "https://example.com/repo.git", "main", null, string.Empty,
             new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" },
-            typeof(ArgumentException)
+            typeof(ArgumentException),
+            true, false
         },
-        // GitBranch is empty (Should NOT throw after change)
+        // GitBranch is empty but has GitBranches (Should NOT throw)
         new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", string.Empty, Directory.GetCurrentDirectory(),
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "", 
+            new[] { "5.3:UE5.3" }, string.Empty,
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            true, false
+        },
+        // GitBranch is empty and no GitBranches but has LocalRepositoryPath (Should NOT throw)
+        new object?[]
+        {
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "", null, Directory.GetCurrentDirectory(),
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            false, true
         },
         // gitRepositoryUrl is null (Should NOT throw)
         new object?[]
         {
-            "TestPlugin", "TestProject", null, "main", Directory.GetCurrentDirectory(),
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
+            "TestPlugin", "TestProject", null, "main", null, Directory.GetCurrentDirectory(),
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            false, false
         },
         // gitBranch is null (Should NOT throw)
         new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", null, Directory.GetCurrentDirectory(),
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null
+            "TestPlugin", "TestProject", "https://example.com/repo.git", null, null, Directory.GetCurrentDirectory(),
+            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
+            true, true
         },
         // EditorPlatforms is empty (Abnormal case)
         new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
-            new string[] { }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, typeof(ArgumentException)
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", null, string.Empty,
+            new string[] { }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, typeof(ArgumentException),
+            true, false
         },
         // EngineVersions is empty (Abnormal case)
         new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", null, string.Empty,
             new[] { "Windows" }, new string[] { }, "test_outputs", true, true, new[] { "Win64" },
-            typeof(ArgumentException)
+            typeof(ArgumentException),
+            false, false
         },
         // PackagePlatforms is empty (Abnormal case)
         new object?[]
         {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", string.Empty,
+            "TestPlugin", "TestProject", "https://example.com/repo.git", "main", null, string.Empty,
             new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new string[] { },
-            typeof(ArgumentException)
+            typeof(ArgumentException),
+            true, true
         }
     };
 
     [Theory]
     [MemberData(nameof(RunTestCases))]
     public async Task Run_MergesConfigAndArgs_Variations(
-        string pluginName, string projectName, string? gitRepositoryUrl, string? gitBranch, string? localRepoPath,
+        string pluginName, string projectName, string? gitRepositoryUrl, string? gitBranch, string[]? gitBranches, string? localRepoPath,
         string[] editorPlatforms, string[] engineVersions, string resultPath,
-        bool runTest, bool runPackage, string[] packagePlatforms, Type? expectedException)
+        bool runTest, bool runPackage, string[] packagePlatforms, Type? expectedException,
+        bool isZipped, bool keepBinaryDirectory)
     {
         var pluginConfig = new PluginConfig
         {
@@ -83,7 +116,9 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             ResultPath = resultPath,
             RunTest = runTest,
             RunPackage = runPackage,
-            PackagePlatforms = new OptionList<GamePlatform>(packagePlatforms.Select(Enum.Parse<GamePlatform>))
+            PackagePlatforms = new OptionList<GamePlatform>(packagePlatforms.Select(Enum.Parse<GamePlatform>)),
+            IsZipped = isZipped,
+            KeepBinaryDirectory = keepBinaryDirectory
         };
         var gitConfig = new GitConfig
         {
@@ -92,6 +127,19 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             GitSshKeyPath = "",
             LocalRepositoryPath = localRepoPath ?? string.Empty
         };
+
+        // Set GitBranches if provided
+        if (gitBranches != null && gitBranches.Length > 0)
+        {
+            foreach (var branch in gitBranches)
+            {
+                var parts = branch.Split(':');
+                if (parts.Length == 2)
+                {
+                    gitConfig.GitBranches[parts[0]] = parts[1];
+                }
+            }
+        }
         var windowsConfig = new WindowsConfig { WindowsUnrealBasePath = @"C:\Program Files\Epic Games" };
         var macConfig = new MacConfig();
         var linuxConfig = new LinuxConfig();
@@ -133,6 +181,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
                 projectName,
                 gitRepositoryUrl,
                 gitBranch,
+                gitBranches,
                 localRepoPath,
                 editorPlatforms,
                 engineVersions,
@@ -141,11 +190,15 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
                 runPackage,
                 packagePlatforms
             );
+            // Assert values after run
+            Assert.Equal(isZipped, pluginConfig.IsZipped);
+            Assert.Equal(keepBinaryDirectory, pluginConfig.KeepBinaryDirectory);
         }
         else
         {
             await Assert.ThrowsAsync(expectedException, () => command.Run(
                 pluginName, projectName, gitRepositoryUrl, gitBranch,
+                gitBranches,
                 localRepoPath,
                 editorPlatforms,
                 engineVersions,
@@ -154,6 +207,9 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
                 runPackage,
                 packagePlatforms
             ));
+            // Assert values even if exception
+            Assert.Equal(isZipped, pluginConfig.IsZipped);
+            Assert.Equal(keepBinaryDirectory, pluginConfig.KeepBinaryDirectory);
         }
     }
 
@@ -216,13 +272,17 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             pluginConfig.ProjectName,
             gitConfig.GitRepositoryUrl,
             gitConfig.GitBranch,
+            null, // gitBranches
             gitConfig.LocalRepositoryPath,
             ["Windows"],
             ["5.3"],
             pluginConfig.ResultPath,    
             pluginConfig.RunTest,
             pluginConfig.RunPackage,
-            ["Win64"]
+            ["Win64"],
+            pluginConfig.KeepBinaryDirectory,
+            pluginConfig.IsZipped,
+            default
         );
     }
 
@@ -281,6 +341,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             pluginConfig.ProjectName,
             gitConfig.GitRepositoryUrl,
             gitConfig.GitBranch,
+            null,
             gitConfig.LocalRepositoryPath,
             ["Windows"],
             ["5.3"],
@@ -346,6 +407,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             pluginConfig.ProjectName,
             gitConfig.GitRepositoryUrl,
             gitConfig.GitBranch,
+            null,
             gitConfig.LocalRepositoryPath,
             ["Windows"],
             ["5.3"],

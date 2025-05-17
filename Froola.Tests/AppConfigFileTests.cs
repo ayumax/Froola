@@ -26,7 +26,7 @@ public class AppConfigFileTests
         _fixture = new Fixture();
         _fixture.Customize(new AutoMoqCustomization());
         _fixture.Customize<MacConfig>(c => c
-            .With(x => x.XcodeNames, new OptionDictionary<string, string>
+            .With(x => x.XcodeNames, new OptionDictionary
             {
                 ["5.5"] = _fixture.Create<string>(),
                 ["5.4"] = _fixture.Create<string>()

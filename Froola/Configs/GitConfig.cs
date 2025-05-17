@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Text.Json.Serialization;
 using Froola.Configs.Attributes;
+using Froola.Configs.Collections;
 using Froola.Interfaces;
 
 namespace Froola.Configs;
@@ -17,9 +19,16 @@ public class GitConfig : IFroolaMergeConfig<GitConfig>
     public string GitRepositoryUrl { get; set; } = string.Empty;
 
     /// <summary>
-    ///     Git branch to use
+    ///     Git branch to use (if the version is not specified in GitBranches, this value is used)
     /// </summary>
     public string GitBranch { get; set; } = "main";
+
+    /// <summary>
+    ///     Dictionary of Git branches per Unreal Engine version (e.g. "main", "UE5.3")
+    /// </summary>
+    public OptionDictionary GitBranches { get; set; } = new();
+
+    [JsonIgnore] public OptionDictionary<UEVersion, string> GitBranchesWithVersion { get; set; } = new(); 
 
     /// <summary>
     ///     Path to the SSH key for Git operations
@@ -38,10 +47,13 @@ public class GitConfig : IFroolaMergeConfig<GitConfig>
     {
         if (string.IsNullOrWhiteSpace(LocalRepositoryPath))
         {
-            // GitBranch
-            if (string.IsNullOrEmpty(GitBranch))
+            if (GitBranches.Count == 0)
             {
-                throw new ArgumentException("GitBranch must not be null or empty");
+                // GitBranch
+                if (string.IsNullOrEmpty(GitBranch))
+                {
+                    throw new ArgumentException("GitBranch must not be null or empty");
+                }
             }
 
             // GitRepositoryUrl
@@ -59,6 +71,13 @@ public class GitConfig : IFroolaMergeConfig<GitConfig>
             }
         }
 
+        // GitBranches, GitBranchesWithVersion
+        GitBranchesWithVersion.Clear();
+        foreach (var (key, value) in GitBranches)
+        {
+            GitBranchesWithVersion.Add(UEVersionExtensions.Parse(key), value);
+        }
+        
         return this;
     }
 }

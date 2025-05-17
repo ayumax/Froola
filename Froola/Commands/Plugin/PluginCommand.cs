@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ConsoleAppFramework;
@@ -28,8 +30,6 @@ public class PluginCommand(
     private IGitClient _gitClient = null!;
     private IFileSystem _fileSystem = null!;
 
-    private string _baseRepoPath = string.Empty;
-
     private IFroolaLogger<PluginCommand> _logger = null!;
 
     public IContainerBuilder ContainerBuilder { get; set; } = new PluginContainerBuilder();
@@ -41,6 +41,7 @@ public class PluginCommand(
     /// <param name="projectName">-p,Name of the project</param>
     /// <param name="gitRepositoryUrl">-u,URL of the git repository</param>
     /// <param name="gitBranch">-b,Branch of the git repository</param>
+    /// <param name="gitBranches">g,Branches of the git repository(format version:branch)</param>
     /// <param name="localRepositoryPath">-l,Path to the local repository</param>
     /// <param name="editorPlatforms">-e,Editor platforms</param>
     /// <param name="engineVersions">-v,Engine versions</param>
@@ -48,6 +49,8 @@ public class PluginCommand(
     /// <param name="runTest">-t,Run tests</param>
     /// <param name="runPackage">-c,Run packaging</param>
     /// <param name="packagePlatforms">-g,Game platforms</param>
+    /// <param name="keepBinaryDirectory">d,Exclude the binary directory.</param>
+    /// <param name="isZipped">z,Create a zip archive of the release directory</param>
     /// <param name="cancellationToken">token for cancellation</param>
     [Command("plugin")]
     [SuppressMessage("ReSharper", "ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator")]
@@ -56,6 +59,7 @@ public class PluginCommand(
         [Required] string projectName,
         string? gitRepositoryUrl = null,
         string? gitBranch = null,
+        string[]? gitBranches = null,
         string? localRepositoryPath = null,
         [EnumArray(typeof(EditorPlatform))] string[]? editorPlatforms = null,
         [UeVersionEnumArray] string[]? engineVersions = null,
@@ -63,6 +67,8 @@ public class PluginCommand(
         bool? runTest = null,
         bool? runPackage = null,
         [EnumArray(typeof(GamePlatform))] string[]? packagePlatforms = null,
+        bool? keepBinaryDirectory = null,
+        bool? isZipped = null,
         CancellationToken cancellationToken = default)
     {
         _pluginConfig = new PluginConfig
@@ -82,13 +88,22 @@ public class PluginCommand(
             PackagePlatforms = packagePlatforms is null
                 ? configOptions.Value.PackagePlatforms
                 : new OptionList<GamePlatform>(
-                    packagePlatforms.Select(x => Enum.Parse<GamePlatform>(x, true)).ToArray())
+                    packagePlatforms.Select(x => Enum.Parse<GamePlatform>(x, true)).ToArray()),
+            KeepBinaryDirectory = keepBinaryDirectory ?? configOptions.Value.KeepBinaryDirectory,
+            IsZipped = isZipped ?? configOptions.Value.IsZipped
         }.Build();
 
         _gitConfig = new GitConfig
         {
             GitRepositoryUrl = gitRepositoryUrl ?? gitOptions.Value.GitRepositoryUrl,
             GitBranch = gitBranch ?? gitOptions.Value.GitBranch,
+            GitBranches = gitBranches is null
+                ? gitOptions.Value.GitBranches
+                : new OptionDictionary(gitBranches.Select(x =>
+                {
+                    var split = x.Split(':');
+                    return split.Length == 2 ? new KeyValuePair<string, string>(split[0], split[1]) : default;
+                })),
             GitSshKeyPath = gitOptions.Value.GitSshKeyPath,
             LocalRepositoryPath = localRepositoryPath ?? gitOptions.Value.LocalRepositoryPath
         }.Build();
@@ -106,9 +121,7 @@ public class PluginCommand(
 
         _fileSystem = dependencyResolver.Resolve<IFileSystem>();
 
-        CreateWorkingRepositoryDirectory();
-
-        await CloneGitRepository();
+        var repoPath = CreateWorkingRepositoryDirectory();
 
         var buildResultsMap = new Dictionary<UEVersion, BuildResult[]>();
         foreach (var engineVersion in _pluginConfig.EngineVersions)
@@ -118,6 +131,8 @@ public class PluginCommand(
                 _logger.LogWarning("Stopped plugin tasks due to cancellation.");
                 break;
             }
+
+            var baseRepoPath = await CloneGitRepository(engineVersion, repoPath);
 
             var tasks = new List<Task<BuildResult>>();
             var builders = dependencyResolver.Resolve<IEnumerable<IBuilder>>().ToArray();
@@ -137,7 +152,8 @@ public class PluginCommand(
                     _logger.LogWarning($"No builder found for {editorPlatform}");
                     continue;
                 }
-                await builder.PrepareRepository(_baseRepoPath, engineVersion);
+
+                await builder.PrepareRepository(baseRepoPath, engineVersion);
                 builder.InitDirectory(engineVersion);
                 tasks.Add(builder.Run(engineVersion));
             }
@@ -155,7 +171,7 @@ public class PluginCommand(
         }
 
         // Clean up temporary directory
-        CleanupClonedDirectory();
+        CleanupClonedDirectory(repoPath);
 
         OutputResults(buildResultsMap);
 
@@ -163,7 +179,7 @@ public class PluginCommand(
         _logger.LogInformation($"All tasks finished. Check {_pluginConfig.ResultPath} for details.");
     }
 
-    private void CreateWorkingRepositoryDirectory()
+    private string CreateWorkingRepositoryDirectory()
     {
         // Create a timestamp folder (year-month-day-hour-minute-second)
         var tempBase = Path.Combine(Path.GetTempPath(), "Froola", _pluginConfig.PluginName);
@@ -180,33 +196,38 @@ public class PluginCommand(
         }
 
         var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
-        _baseRepoPath = Path.Combine(tempBase, timestamp, "base");
+        var repoPath = Path.Combine(tempBase, timestamp);
 
         // Create a results directory if it doesn't exist
-        if (!_fileSystem.DirectoryExists(_baseRepoPath))
+        if (!_fileSystem.DirectoryExists(repoPath))
         {
-            _fileSystem.CreateDirectory(_baseRepoPath);
+            _fileSystem.CreateDirectory(repoPath);
         }
+
+        return repoPath;
     }
 
     /// <summary>
     ///     Prepares temporary Git repositories for each target OS.
     /// </summary>
-    private async Task CloneGitRepository()
+    private async Task<string> CloneGitRepository(UEVersion ueVersion, string repoPath)
     {
+        var baseRepoPath = Path.Combine(repoPath, ueVersion.ToString(), "base");
+        
         if (string.IsNullOrWhiteSpace(_gitConfig.LocalRepositoryPath))
         {
             _logger.LogInformation($"Preparing Git repositories from {_gitConfig.GitRepositoryUrl}");
 
             // First clone for Windows
-            if (!await _gitClient.CloneRepository(_gitConfig.GitRepositoryUrl, _gitConfig.GitBranch,
-                    _baseRepoPath))
+            if (!await _gitClient.CloneRepository(_gitConfig.GitRepositoryUrl,
+                    _gitConfig.GitBranchesWithVersion.GetValueOrDefault(ueVersion, _gitConfig.GitBranch),
+                    baseRepoPath))
             {
                 _logger.LogError("Failed to clone repository for Windows");
                 throw new InvalidOperationException("Failed to clone repository for Windows");
             }
 
-            var gitDirectory = Path.Combine(_baseRepoPath, ".git");
+            var gitDirectory = Path.Combine(baseRepoPath, ".git");
             try
             {
                 _fileSystem.RemoveReadOnlyAttribute(gitDirectory);
@@ -225,14 +246,14 @@ public class PluginCommand(
             foreach (var directory in directories)
             {
                 _fileSystem.CopyDirectory(Path.Combine(_gitConfig.LocalRepositoryPath, directory),
-                    Path.Combine(_baseRepoPath, directory));
+                    Path.Combine(baseRepoPath, directory));
             }
 
             string[] files = [$"{_pluginConfig.ProjectName}.uproject"];
             foreach (var file in files)
             {
                 _fileSystem.FileCopy(Path.Combine(_gitConfig.LocalRepositoryPath, file),
-                    Path.Combine(_baseRepoPath, file), true);
+                    Path.Combine(baseRepoPath, file), true);
             }
         }
         else
@@ -241,23 +262,24 @@ public class PluginCommand(
             throw new InvalidOperationException("Local repository does not exist");
         }
 
+        return baseRepoPath;
     }
 
     /// <summary>
     ///     Cleans up temporary directories used during the build process.
     /// </summary>
-    private void CleanupClonedDirectory()
+    private void CleanupClonedDirectory(string repoPath)
     {
-        if (!_fileSystem.DirectoryExists(_baseRepoPath))
+        if (!_fileSystem.DirectoryExists(repoPath))
         {
             return;
         }
 
-        _logger.LogInformation($"Cleaning up temporary directory for : {_baseRepoPath}");
+        _logger.LogInformation($"Cleaning up temporary directory for : {repoPath}");
 
         try
         {
-            _fileSystem.DeleteDirectory(_baseRepoPath, true);
+            _fileSystem.DeleteDirectory(repoPath, true);
         }
         catch (Exception ex)
         {
@@ -326,6 +348,13 @@ public class PluginCommand(
             {
                 _fileSystem.CopyDirectory(platformPackageDir, mergedDir);
                 isFirst = false;
+
+                if (!_pluginConfig.KeepBinaryDirectory)
+                {
+                    _fileSystem.DeleteDirectory(Path.Combine(mergedDir, "Binaries"), true);
+                    _fileSystem.DeleteDirectory(Path.Combine(mergedDir, "Intermediate"), true);
+                    break;
+                }
             }
             else
             {
@@ -334,7 +363,53 @@ public class PluginCommand(
             }
         }
 
+        if (ZipDirectory(mergedDir, engineVersion))
+        {
+            _fileSystem.DeleteDirectory(mergedDir, true);
+        }
+        
         _logger.LogInformation($"Merged directory created for {engineVersion.ToFullVersionString()} : {mergedDir}");
+    }
+
+    private bool ZipDirectory(string sourceDirectory, UEVersion engineVersion)
+    {
+        if (!_pluginConfig.IsZipped || !_fileSystem.DirectoryExists(sourceDirectory))
+        {
+            return false;
+        }
+
+        var zipFileName =
+            $"{_pluginConfig.PluginName}_{GetPluginVersion(sourceDirectory)}_{engineVersion.ToFullVersionString()}.zip";
+        var zipFilePath = Path.Combine(_pluginConfig.ResultPath, "release", zipFileName);
+
+        _logger.LogInformation($"Creating zip file: {zipFilePath}");
+
+        if (_fileSystem.FileExists(zipFilePath))
+        {
+            _fileSystem.DeleteFile(zipFilePath);
+        }
+
+        ZipFile.CreateFromDirectory(sourceDirectory, zipFilePath);
+
+        _logger.LogInformation($"Zip file created: {zipFilePath}");
+
+        return true;
+    }
+
+    private string GetPluginVersion(string sourceDirectory)
+    {
+        var pluginVersionFilePath = Path.Combine(sourceDirectory, $"{_pluginConfig.PluginName}.uplugin");
+
+        if (!_fileSystem.FileExists(pluginVersionFilePath))
+        {
+            return "0_0_0";
+        }
+
+        var jsonText = _fileSystem.ReadAllText(pluginVersionFilePath);
+        var jsonObject = JsonDocument.Parse(jsonText);
+        var pluginVersion = jsonObject.RootElement.GetProperty("VersionName").GetString() ?? "0.0.0";
+
+        return pluginVersion.Replace('.', '_').Trim();
     }
 
     private async Task OutputSettings(IConfigJsonExporter configJsonExporter)

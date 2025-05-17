@@ -141,6 +141,7 @@ Froola.exe init-config -o "path to save config template(*.json)"
 |--------------------------------------|------------|------------------------------------------------|-----------------------------------------------|
 | Git.GitRepositoryUrl                 | string     | Git repository URL                             | "git@github.com:xxx/yyy.git"                 |
 | Git.GitBranch                        | string     | Branch name to checkout                            | "main"                                       |
+| Git.GitBranches                      | Key-Value  | UE version-specific Git branches                 | {"5.5":"UE5.5","5.4":"UE5.4","5.3":"UE5.3"}            |
 | Git.GitSshKeyPath                    | string     | GitHub SSH private key file path (※1)         | "C:\\Users\\user\\.ssh\\id_rsa"            |
 | Git.LocalRepositoryPath              | string     | Local repository path (※2)                     | "C:\\repo\\ue_plugin_project"                           |
 | InitConfig.OutputPath                | string     | appsettings.json template output path (※3)      | "C:\\FroolaConfig"                           |
@@ -157,6 +158,8 @@ Froola.exe init-config -o "path to save config template(*.json)"
 | Plugin.RunTest                       | bool       | Run tests                                       | true                                          |
 | Plugin.RunPackage                    | bool       | Run packaging                                   | true                                          |
 | Plugin.PackagePlatforms              | array      | Packaging platforms to use                     | ["Win64","Mac","Linux","Android","IOS"]     |
+| Plugin.IsZipped                      | bool       | Whether to zip the plugin output                | true                                          |
+| Plugin.KeepBinaryDirectory           | bool       | Whether to keep the Binary directory after the operation | false                                         |
 | Windows.WindowsUnrealBasePath        | string     | Windows Unreal Engine installation base path   | "C:\\Program Files\\Epic Games"              |
 | Linux.DockerCommand                  | string     | Docker command ("docker" or "podman")           | "docker"                                     |
 | Linux.DockerImage                    | string     | Docker image (%v will be replaced with UE version)      | "ghcr.io/epicgames/unreal-engine:dev-slim-%v" |
@@ -189,6 +192,7 @@ This command will execute the build and packaging process based on the settings 
 | -p, --project-name           | string     | Project name (required)                           |
 | -u, --git-repository-url     | string     | Git repository URL                         |
 | -b, --git-branch             | string     | Branch name                               |
+| -g, --git-branches           | string[]?  | UE version-specific Git branches                 |
 | -l, --local-repository-path  | string     | Local repository path                               |
 | -e, --editor-platforms       | string[]?  | Editor platforms (e.g., Windows, Mac, Linux)|
 | -v, --engine-versions        | string[]?  | Unreal Engine versions (e.g., 5.3, 5.4, 5.5)     |
@@ -196,6 +200,8 @@ This command will execute the build and packaging process based on the settings 
 | -t, --run-test               | bool?      | Run tests                                       |
 | -c, --run-package            | bool?      | Run packaging                                   |
 | -g, --package-platforms      | string[]?  | Packaging platforms (Win64, Mac, Linux, Android, IOS)|
+| -d, --keep-binary-directory  | bool?      | Whether to keep the Binary directory after the operation |
+| -z, --is-zipped              | bool?      | Whether to zip the plugin output                |
 
 
 ※Non-required items can also be set in `appsettings.json`. Command-line arguments take priority over `appsettings.json` settings.
@@ -212,7 +218,7 @@ This command will execute the build and packaging process based on the settings 
 ## Output Example
 Results are saved in the directory specified by `--result-path` (or `appsettings.json`'s `Plugin.ResultPath`) in the following structure:
 
-Plugin name = ObjectDeliverer, UE 5.5, Windows, Mac, and Linux platforms
+Plugin name = ObjectDeliverer, v1.6.1, UE 5.5, Windows, Mac, and Linux platforms
 ```
 20250502_205034_ObjectDeliverer/
 ├── build
@@ -261,12 +267,7 @@ Plugin name = ObjectDeliverer, UE 5.5, Windows, Mac, and Linux platforms
 │           ├── Resources
 │           └── Source
 ├── releases
-│   └── ObjectDeliverer_UE5.5
-│       ├── ObjectDeliverer.uplugin
-│       ├── Binaries
-│       ├── Intermediate
-│       ├── Resources
-│       └── Source
+│   └── ObjectDeliverer_1_6_1_UE5.5.zip
 ├── froola.log
 └── settings.json
 ```
@@ -281,7 +282,7 @@ Plugin name = ObjectDeliverer, UE 5.5, Windows, Mac, and Linux platforms
   - BuildPlugin.log : UE package log
   - Plugin directory : Package result
 - releases directory : Merged package for all platforms
-  - <Plugin name>_<UE version> directory : Merged plugin package
+  - <Plugin name>_<Version>_<UE version>.zip : Plugin package for release to Fab
 - froola.log : Froola log
 - settings.json : Merged settings from `appsettings.json` and command-line arguments
 
