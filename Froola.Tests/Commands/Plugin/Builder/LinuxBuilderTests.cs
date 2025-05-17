@@ -43,7 +43,7 @@ public class LinuxBuilderTests
         var builder = CreateBuilder();
         const string baseRepo = "/src/repo";
         const UEVersion version = UEVersion.UE_5_3;
-        var expectedRepoPath = Path.Combine(baseRepo, "..", "Linux", version.ToVersionString());
+        var expectedRepoPath = Path.Combine(baseRepo, "..", "Linux");
         _mockFileSystem.Setup(f => f.DirectoryExists(expectedRepoPath)).Returns(false);
 
         await builder.PrepareRepository(baseRepo, version);

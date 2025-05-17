@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace Froola.Configs.Collections;
@@ -10,7 +9,7 @@ public class OptionDictionary<TKey, TValue> : Dictionary<TKey, TValue> where TKe
     {
     }
 
-    public OptionDictionary(IEnumerable<KeyValuePair<TKey, TValue>> pairs) : base(pairs)
+    public OptionDictionary(IEnumerable<KeyValuePair<TKey, TValue>> pairs) 
     {
     }
 
@@ -47,8 +46,13 @@ public class OptionDictionary : OptionDictionary<string, string>
     }
 
     public OptionDictionary(IEnumerable<KeyValuePair<string, string>> pairs)
-        : base(pairs.Where(x =>
-            string.IsNullOrWhiteSpace(x.Key) && string.IsNullOrWhiteSpace(x.Value)))
     {
+        foreach (var pair in pairs)
+        {
+            if (!string.IsNullOrWhiteSpace(pair.Key))
+            {
+                Add(pair.Key, pair.Value);
+            }
+        }
     }
 }

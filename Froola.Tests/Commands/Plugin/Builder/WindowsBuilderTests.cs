@@ -42,7 +42,7 @@ public class WindowsBuilderTests
         var builder = CreateBuilder();
         const string baseRepo = "C:/src/repo";
         const UEVersion version = UEVersion.UE_5_3;
-        var expectedPath = Path.Combine(baseRepo, "..", "Windows", version.ToVersionString());
+        var expectedPath = Path.Combine(baseRepo, "..", "Windows");
 
         await builder.PrepareRepository(baseRepo, version);
         Assert.Equal(expectedPath, builder.RepositoryPath);

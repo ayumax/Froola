@@ -47,10 +47,13 @@ public class GitConfig : IFroolaMergeConfig<GitConfig>
     {
         if (string.IsNullOrWhiteSpace(LocalRepositoryPath))
         {
-            // GitBranch
-            if (string.IsNullOrEmpty(GitBranch))
+            if (GitBranches.Count == 0)
             {
-                throw new ArgumentException("GitBranch must not be null or empty");
+                // GitBranch
+                if (string.IsNullOrEmpty(GitBranch))
+                {
+                    throw new ArgumentException("GitBranch must not be null or empty");
+                }
             }
 
             // GitRepositoryUrl
