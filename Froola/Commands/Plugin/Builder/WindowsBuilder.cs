@@ -26,6 +26,7 @@ public class WindowsBuilder(
     : BuilderBase(pluginConfig, windowsConfig, macConfig, logger, fileSystem, testResultsEvaluator), IWindowsBuilder
 {
     private readonly PluginConfig _pluginConfig = pluginConfig;
+    private readonly WindowsConfig _windowsConfig = windowsConfig;
     private readonly IFileSystem _fileSystem = fileSystem;
 
     /// <summary>
@@ -79,6 +80,12 @@ public class WindowsBuilder(
             }
 
             result.StatusOfPackage = CheckPackageBuildResult(engineVersion);
+
+            // Copy package to destination if configured
+            if (result.StatusOfPackage == BuildStatus.Success && _pluginConfig.CopyPackageAfterBuild)
+            {
+                await CopyPackageToDestination(engineVersion);
+            }
         }
 
         return result;
@@ -211,6 +218,65 @@ public class WindowsBuilder(
         }
 
         return true;
+    }
+
+    /// <summary>
+    ///     Copies the packaged plugin to the configured destination path
+    /// </summary>
+    /// <param name="engineVersion">Engine version</param>
+    private async Task CopyPackageToDestination(UEVersion engineVersion)
+    {
+        try
+        {
+            // Get version-specific destination path or fall back to default
+            string destinationPath = string.Empty;
+            
+            if (_windowsConfig.CopyPackageDestinationPathsWithVersion.TryGetValue(engineVersion, out var versionSpecificPath))
+            {
+                destinationPath = versionSpecificPath;
+                logger.LogInformation($"Using version-specific destination path for UE {engineVersion}: {destinationPath}");
+            }
+
+            if (string.IsNullOrWhiteSpace(destinationPath))
+            {
+                logger.LogWarning("No destination path configured for plugin copy, skipping copy operation");
+                return;
+            }
+
+            // Find the packaged plugin directory
+            var packagedPluginDir = Path.Combine(PackageDir, _pluginConfig.PluginName);
+            if (!_fileSystem.DirectoryExists(packagedPluginDir))
+            {
+                logger.LogWarning($"Packaged plugin directory not found: {packagedPluginDir}");
+                return;
+            }
+
+            // Create destination directory if it doesn't exist
+            if (!_fileSystem.DirectoryExists(destinationPath))
+            {
+                _fileSystem.CreateDirectory(destinationPath);
+                logger.LogInformation($"Created destination directory: {destinationPath}");
+            }
+
+            var pluginDestinationPath = Path.Combine(destinationPath, _pluginConfig.PluginName);
+            
+            // Remove existing plugin if it exists
+            if (_fileSystem.DirectoryExists(pluginDestinationPath))
+            {
+                _fileSystem.DeleteDirectory(pluginDestinationPath, true);
+                logger.LogInformation($"Removed existing plugin at: {pluginDestinationPath}");
+            }
+
+            // Copy the packaged plugin
+            _fileSystem.CopyDirectory(packagedPluginDir, pluginDestinationPath);
+            logger.LogInformation($"Successfully copied packaged plugin from {packagedPluginDir} to {pluginDestinationPath}");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Failed to copy packaged plugin: {ex.Message}", ex);
+        }
+
+        await Task.CompletedTask;
     }
 
     /// <summary>

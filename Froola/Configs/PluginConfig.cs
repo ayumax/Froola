@@ -64,6 +64,11 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
     /// </summary>
     public bool KeepBinaryDirectory { get; set; } = false;
 
+    /// <summary>
+    ///     Whether to copy packaged plugin to configured destination paths after successful packaging
+    /// </summary>
+    public bool CopyPackageAfterBuild { get; set; } = false;
+
     public PluginConfig Build()
     {
         var resultPath = string.IsNullOrEmpty(ResultPath)

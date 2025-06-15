@@ -33,6 +33,7 @@ public class LinuxBuilder(
     private string _repoPathInWindows = "";
     private string? _pluginsStagePathInWindows;
     private readonly PluginConfig _pluginConfig = pluginConfig;
+    private readonly LinuxConfig _linuxConfig = linuxConfig;
     private readonly IFileSystem _fileSystem = fileSystem;
 
 
@@ -80,6 +81,12 @@ public class LinuxBuilder(
                 result.StatusOfPackage = await PackageBuildAsync(engineVersion)
                     ? BuildStatus.Success
                     : BuildStatus.Failed;
+
+                // Copy package to destination if configured
+                if (result.StatusOfPackage == BuildStatus.Success && _pluginConfig.CopyPackageAfterBuild)
+                {
+                    await CopyPackageToDestination(engineVersion);
+                }
             }
 
             return result;
@@ -366,5 +373,65 @@ public class LinuxBuilder(
             $"Package build result: {(statusOfPackage ? "SUCCESS" : "FAILURE")}");
 
         return statusOfPackage;
+    }
+
+    /// <summary>
+    ///     Copies the packaged plugin to the configured destination path for use with future Docker builds
+    /// </summary>
+    /// <param name="engineVersion">Engine version</param>
+    private async Task CopyPackageToDestination(UEVersion engineVersion)
+    {
+        try
+        {
+            // Get version-specific destination path or fall back to default
+            string destinationPath = string.Empty;
+            
+            if (_linuxConfig.CopyPackageDestinationPathsWithVersion.TryGetValue(engineVersion, out var versionSpecificPath))
+            {
+                destinationPath = versionSpecificPath;
+                logger.LogInformation($"Using version-specific destination path for UE {engineVersion}: {destinationPath}");
+            }
+
+            if (string.IsNullOrWhiteSpace(destinationPath))
+            {
+                logger.LogWarning("No destination path configured for plugin copy, skipping copy operation");
+                return;
+            }
+
+            // Find the packaged plugin directory in the local PackageDir (already copied from Docker)
+            var localPackagedPluginDir = Path.Combine(PackageDir, _pluginConfig.PluginName);
+            if (!_fileSystem.DirectoryExists(localPackagedPluginDir))
+            {
+                logger.LogWarning($"Packaged plugin directory not found locally: {localPackagedPluginDir}");
+                return;
+            }
+
+            // Create destination directory if it doesn't exist
+            if (!_fileSystem.DirectoryExists(destinationPath))
+            {
+                _fileSystem.CreateDirectory(destinationPath);
+                logger.LogInformation($"Created destination directory: {destinationPath}");
+            }
+
+            var pluginDestinationPath = Path.Combine(destinationPath, _pluginConfig.PluginName);
+            
+            // Remove existing plugin if it exists
+            if (_fileSystem.DirectoryExists(pluginDestinationPath))
+            {
+                _fileSystem.DeleteDirectory(pluginDestinationPath, true);
+                logger.LogInformation($"Removed existing plugin at: {pluginDestinationPath}");
+            }
+
+            // Copy the packaged plugin to the staging area
+            _fileSystem.CopyDirectory(localPackagedPluginDir, pluginDestinationPath);
+            logger.LogInformation($"Successfully copied packaged plugin from {localPackagedPluginDir} to {pluginDestinationPath}");
+            logger.LogInformation($"Plugin is now available in the staging area. Configure LinuxConfig.DockerPluginsSourcePaths[\"{engineVersion.ToVersionString()}\"] = \"{destinationPath}\" to use it in future Docker builds via CopyPluginsToDocker.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Failed to copy packaged plugin: {ex.Message}", ex);
+        }
+
+        await Task.CompletedTask;
     }
 }

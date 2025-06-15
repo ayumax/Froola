@@ -319,4 +319,334 @@ var builder = new TestableLinuxBuilder(
         _mockDockerRunner.Verify(d => d.PreparePluginsForDockerAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         _mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("No plugin source path configured")), It.IsAny<string>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_False_DoesNotCopyPackage()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = false;
+        config.RunPackage = true;
+        
+        var linuxConfig = new LinuxConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "C:/TempPlugins" } }
+        };
+        linuxConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "C:/TempPlugins");
+        
+        var builder = new TestableLinuxBuilder(
+            config, _windowsConfig, _macConfig, linuxConfig,
+            _mockDockerRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        _mockDockerRunner.Setup(r => r.IsDockerReady()).ReturnsAsync(true);
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+            .Returns(BuildStatus.Success);
+        
+        const UEVersion version = UEVersion.UE_5_3;
+        await builder.PrepareRepository("/src/repo", version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfPackage);
+        // Verify only the PrepareRepository copy was performed, no additional plugin copies
+        _mockFileSystem.Verify(f => f.CopyDirectory(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_WithValidDestination_CopiesPackage()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var linuxConfig = new LinuxConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "C:/TempPlugins" } }
+        };
+        linuxConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "C:/TempPlugins");
+        
+        var builder = new TestableLinuxBuilder(
+            config, _windowsConfig, _macConfig, linuxConfig,
+            _mockDockerRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        _mockDockerRunner.Setup(r => r.IsDockerReady()).ReturnsAsync(true);
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+            .Returns(BuildStatus.Success);
+        
+        // Setup file system mocks  
+        var packageSourcePath = "/tmp/packages/Linux_UE5.3/TestPlugin";
+        var destinationPath = Path.Combine("C:/TempPlugins", "TestPlugin");
+        
+        _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
+        _mockFileSystem.Setup(f => f.DirectoryExists("C:/TempPlugins")).Returns(true);
+        _mockFileSystem.Setup(f => f.DirectoryExists(destinationPath)).Returns(false);
+        
+        const UEVersion version = UEVersion.UE_5_3;
+        await builder.PrepareRepository("/src/repo", version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfPackage);
+        
+        // Verify copy operations (PrepareRepository + plugin copy)
+        _mockFileSystem.Verify(f => f.CopyDirectory(packageSourcePath, destinationPath), Times.Once);
+        _mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Successfully copied packaged plugin")), It.IsAny<string>()), Times.Once);
+        _mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("available in the staging area")), It.IsAny<string>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_PackageNotFound_LogsWarning()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var linuxConfig = new LinuxConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "C:/TempPlugins" } }
+        };
+        linuxConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "C:/TempPlugins");
+        
+        var builder = new TestableLinuxBuilder(
+            config, _windowsConfig, _macConfig, linuxConfig,
+            _mockDockerRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        _mockDockerRunner.Setup(r => r.IsDockerReady()).ReturnsAsync(true);
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+            .Returns(BuildStatus.Success);
+        
+        // Setup file system to return false for package directory existence
+        var packageSourcePath = "/tmp/Linux/Packages/TestPlugin";
+        _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(false);
+        
+        const UEVersion version = UEVersion.UE_5_3;
+        await builder.PrepareRepository("/src/repo", version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfPackage);
+        _mockLogger.Verify(l => l.LogWarning(It.Is<string>(s => s.Contains("Packaged plugin directory not found")), It.IsAny<string>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_NoDestinationConfigured_LogsWarning()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var linuxConfig = new LinuxConfig(); // No destination paths configured
+        
+        var builder = new TestableLinuxBuilder(
+            config, _windowsConfig, _macConfig, linuxConfig,
+            _mockDockerRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        _mockDockerRunner.Setup(r => r.IsDockerReady()).ReturnsAsync(true);
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+            .Returns(BuildStatus.Success);
+        
+        const UEVersion version = UEVersion.UE_5_3;
+        await builder.PrepareRepository("/src/repo", version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfPackage);
+        _mockLogger.Verify(l => l.LogWarning(It.Is<string>(s => s.Contains("No destination path configured for plugin copy")), It.IsAny<string>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_CreatesDestinationDirectory()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var linuxConfig = new LinuxConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "C:/NewTempPlugins" } }
+        };
+        linuxConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "C:/NewTempPlugins");
+        
+        var builder = new TestableLinuxBuilder(
+            config, _windowsConfig, _macConfig, linuxConfig,
+            _mockDockerRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        _mockDockerRunner.Setup(r => r.IsDockerReady()).ReturnsAsync(true);
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+            .Returns(BuildStatus.Success);
+        
+        // Setup file system mocks  
+        var packageSourcePath = "/tmp/packages/Linux_UE5.3/TestPlugin";
+        _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
+        _mockFileSystem.Setup(f => f.DirectoryExists("C:/NewTempPlugins")).Returns(false); // Destination doesn't exist
+        
+        const UEVersion version = UEVersion.UE_5_3;
+        await builder.PrepareRepository("/src/repo", version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfPackage);
+        
+        // Verify destination directory creation
+        _mockFileSystem.Verify(f => f.CreateDirectory("C:/NewTempPlugins"), Times.Once);
+        _mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Created destination directory")), It.IsAny<string>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_RemovesExistingPlugin()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var linuxConfig = new LinuxConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "C:/TempPlugins" } }
+        };
+        linuxConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "C:/TempPlugins");
+        
+        var builder = new TestableLinuxBuilder(
+            config, _windowsConfig, _macConfig, linuxConfig,
+            _mockDockerRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        _mockDockerRunner.Setup(r => r.IsDockerReady()).ReturnsAsync(true);
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+            .Returns(BuildStatus.Success);
+        
+        // Setup file system mocks  
+        var packageSourcePath = "/tmp/packages/Linux_UE5.3/TestPlugin";
+        var destinationPath = Path.Combine("C:/TempPlugins", "TestPlugin");
+        
+        _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
+        _mockFileSystem.Setup(f => f.DirectoryExists("C:/TempPlugins")).Returns(true);
+        _mockFileSystem.Setup(f => f.DirectoryExists(destinationPath)).Returns(true); // Plugin already exists
+        
+        const UEVersion version = UEVersion.UE_5_3;
+        await builder.PrepareRepository("/src/repo", version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfPackage);
+        
+        // Verify existing plugin removal
+        _mockFileSystem.Verify(f => f.DeleteDirectory(destinationPath, true), Times.Once);
+        _mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Removed existing plugin")), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_PackageFailed_DoesNotCopy()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var linuxConfig = new LinuxConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "C:/TempPlugins" } }
+        };
+        linuxConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "C:/TempPlugins");
+        
+        var builder = new TestableLinuxBuilder(
+            config, _windowsConfig, _macConfig, linuxConfig,
+            _mockDockerRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        _mockDockerRunner.Setup(r => r.IsDockerReady()).ReturnsAsync(true);
+        // Setup package build to fail
+        builder.PackageBuildAsyncResult = false;
+        
+        const UEVersion version = UEVersion.UE_5_3;
+        await builder.PrepareRepository("/src/repo", version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Failed, result.StatusOfPackage);
+        
+        // Verify no copy operations were performed (only PrepareRepository copy)
+        _mockFileSystem.Verify(f => f.CopyDirectory(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_LogsDockerConfigurationAdvice()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var linuxConfig = new LinuxConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "C:/TempPlugins" } }
+        };
+        linuxConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "C:/TempPlugins");
+        
+        var builder = new TestableLinuxBuilder(
+            config, _windowsConfig, _macConfig, linuxConfig,
+            _mockDockerRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        _mockDockerRunner.Setup(r => r.IsDockerReady()).ReturnsAsync(true);
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+            .Returns(BuildStatus.Success);
+        
+        // Setup file system mocks  
+        var packageSourcePath = "/tmp/packages/Linux_UE5.3/TestPlugin";
+        _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
+        _mockFileSystem.Setup(f => f.DirectoryExists("C:/TempPlugins")).Returns(true);
+        
+        const UEVersion version = UEVersion.UE_5_3;
+        await builder.PrepareRepository("/src/repo", version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfPackage);
+        
+        // Verify configuration advice is logged
+        _mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Configure LinuxConfig.DockerPluginsSourcePaths")), It.IsAny<string>()), Times.Once);
+        _mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("CopyPluginsToDocker")), It.IsAny<string>()), Times.Once);
+    }
 }

@@ -38,6 +38,16 @@ public class LinuxConfig
     ///     Internal dictionary with parsed UE versions as keys
     /// </summary>
     [JsonIgnore] public OptionDictionary<UEVersion, string> DockerPluginsSourcePathsWithVersion { get; set; } = new();
+
+    /// <summary>
+    ///     Dictionary of destination paths per Unreal Engine version for copying packaged plugins (e.g. "5.5": "C:\\TempPlugins\\UE5.5")
+    /// </summary>
+    public OptionDictionary CopyPackageDestinationPaths { get; set; } = new();
+
+    /// <summary>
+    ///     Internal dictionary with parsed UE versions as keys
+    /// </summary>
+    [JsonIgnore] public OptionDictionary<UEVersion, string> CopyPackageDestinationPathsWithVersion { get; set; } = new();
 }
 
 public class LinuxConfigPostConfigure : IPostConfigureOptions<LinuxConfig>
@@ -65,6 +75,13 @@ public class LinuxConfigPostConfigure : IPostConfigureOptions<LinuxConfig>
         foreach (var (key, value) in config.DockerPluginsSourcePaths)
         {
             config.DockerPluginsSourcePathsWithVersion.Add(UEVersionExtensions.Parse(key), value);
+        }
+
+        // CopyPackageDestinationPaths, CopyPackageDestinationPathsWithVersion
+        config.CopyPackageDestinationPathsWithVersion.Clear();
+        foreach (var (key, value) in config.CopyPackageDestinationPaths)
+        {
+            config.CopyPackageDestinationPathsWithVersion.Add(UEVersionExtensions.Parse(key), value);
         }
     }
 }
