@@ -239,4 +239,219 @@ public class MacBuilderTests
         Assert.Equal(0, builder.TestAsyncCallCount);
         Assert.Equal(1, builder.PackageBuildAsyncCallCount);
     }
+
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_False_DoesNotCopyPackage()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = false;
+        config.RunPackage = true;
+        
+        var macConfig = new MacConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "/Applications/UE_5.3/Engine/Plugins" } }
+        };
+        macConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "/Applications/UE_5.3/Engine/Plugins");
+        
+        var builder = new TestableMacBuilder(
+            config, _windowsConfig, macConfig,
+            _mockMacRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        const string baseRepo = "C:/src/repo";
+        const UEVersion version = UEVersion.UE_5_3;
+        _mockMacRunner.Setup(r => r.DirectoryExists(It.IsAny<string>())).ReturnsAsync(false);
+        _mockMacRunner.Setup(r => r.MakeDirectory(It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.UploadDirectory(baseRepo, It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.DownloadDirectory(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.FileExists(It.IsAny<string>())).ReturnsAsync(true);
+        
+        await builder.PrepareRepository(baseRepo, version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfBuild);
+        // Verify no additional copy operations were performed
+        _mockFileSystem.Verify(f => f.CopyDirectory(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+    
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_WithValidDestination_CopiesPackage()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var macConfig = new MacConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "/Applications/UE_5.3/Engine/Plugins" } }
+        };
+        macConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "/Applications/UE_5.3/Engine/Plugins");
+        
+        var builder = new TestableMacBuilder(
+            config, _windowsConfig, macConfig,
+            _mockMacRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        // Setup file system mocks
+        var packageSourcePath = Path.Combine("C:/tmp", "packages", "Mac_UE5.3", "TestPlugin");
+        var destinationPath = Path.Combine("/Applications/UE_5.3/Engine/Plugins", "TestPlugin");
+        
+        _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
+        _mockFileSystem.Setup(f => f.DirectoryExists("/Applications/UE_5.3/Engine/Plugins")).Returns(true);
+        _mockFileSystem.Setup(f => f.DirectoryExists(destinationPath)).Returns(false);
+        
+        const string baseRepo = "C:/src/repo";
+        const UEVersion version = UEVersion.UE_5_3;
+        _mockMacRunner.Setup(r => r.DirectoryExists(It.IsAny<string>())).ReturnsAsync(false);
+        _mockMacRunner.Setup(r => r.MakeDirectory(It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.UploadDirectory(baseRepo, It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.DownloadDirectory(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.FileExists(It.IsAny<string>())).ReturnsAsync(true);
+        
+        await builder.PrepareRepository(baseRepo, version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfBuild);
+        
+        // Verify copy operations
+        _mockFileSystem.Verify(f => f.CopyDirectory(packageSourcePath, destinationPath), Times.Once);
+        _mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Successfully copied packaged plugin")), It.IsAny<string>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_PackageNotFound_LogsWarning()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var macConfig = new MacConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "/Applications/UE_5.3/Engine/Plugins" } }
+        };
+        macConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "/Applications/UE_5.3/Engine/Plugins");
+        
+        var builder = new TestableMacBuilder(
+            config, _windowsConfig, macConfig,
+            _mockMacRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        // Setup file system to return false for package directory existence
+        var packageSourcePath = Path.Combine("C:/tmp", "packages", "Mac_UE5.3", "TestPlugin");
+        _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(false);
+        
+        const string baseRepo = "C:/src/repo";
+        const UEVersion version = UEVersion.UE_5_3;
+        _mockMacRunner.Setup(r => r.DirectoryExists(It.IsAny<string>())).ReturnsAsync(false);
+        _mockMacRunner.Setup(r => r.MakeDirectory(It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.UploadDirectory(baseRepo, It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.DownloadDirectory(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.FileExists(It.IsAny<string>())).ReturnsAsync(true);
+        
+        await builder.PrepareRepository(baseRepo, version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfBuild);
+        _mockLogger.Verify(l => l.LogWarning(It.Is<string>(s => s.Contains("Packaged plugin directory not found")), It.IsAny<string>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_NoDestinationConfigured_LogsWarning()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var macConfig = new MacConfig(); // No destination paths configured
+        
+        var builder = new TestableMacBuilder(
+            config, _windowsConfig, macConfig,
+            _mockMacRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        const string baseRepo = "C:/src/repo";
+        const UEVersion version = UEVersion.UE_5_3;
+        _mockMacRunner.Setup(r => r.DirectoryExists(It.IsAny<string>())).ReturnsAsync(false);
+        _mockMacRunner.Setup(r => r.MakeDirectory(It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.UploadDirectory(baseRepo, It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.DownloadDirectory(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.FileExists(It.IsAny<string>())).ReturnsAsync(true);
+        
+        await builder.PrepareRepository(baseRepo, version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfBuild);
+        _mockLogger.Verify(l => l.LogWarning(It.Is<string>(s => s.Contains("No destination path configured for plugin copy")), It.IsAny<string>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task Run_CopyPackageAfterBuild_True_CreatesDestinationDirectory()
+    {
+        var config = _pluginConfig;
+        config.CopyPackageAfterBuild = true;
+        config.RunPackage = true;
+        
+        var macConfig = new MacConfig
+        {
+            CopyPackageDestinationPaths = new() { { "5.3", "/Applications/NewUE/Engine/Plugins" } }
+        };
+        macConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "/Applications/NewUE/Engine/Plugins");
+        
+        var builder = new TestableMacBuilder(
+            config, _windowsConfig, macConfig,
+            _mockMacRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            PackageBuildAsyncResult = true
+        };
+        
+        // Setup file system mocks
+        var packageSourcePath = Path.Combine("C:/tmp", "packages", "Mac_UE5.3", "TestPlugin");
+        _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
+        _mockFileSystem.Setup(f => f.DirectoryExists("/Applications/NewUE/Engine/Plugins")).Returns(false); // Destination doesn't exist
+        
+        const string baseRepo = "C:/src/repo";
+        const UEVersion version = UEVersion.UE_5_3;
+        _mockMacRunner.Setup(r => r.DirectoryExists(It.IsAny<string>())).ReturnsAsync(false);
+        _mockMacRunner.Setup(r => r.MakeDirectory(It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.UploadDirectory(baseRepo, It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.DownloadDirectory(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        _mockMacRunner.Setup(r => r.FileExists(It.IsAny<string>())).ReturnsAsync(true);
+        
+        await builder.PrepareRepository(baseRepo, version);
+        builder.InitDirectory(version);
+        
+        var result = await builder.Run(version);
+        
+        Assert.Equal(BuildStatus.Success, result.StatusOfBuild);
+        
+        // Verify destination directory creation
+        _mockFileSystem.Verify(f => f.CreateDirectory("/Applications/NewUE/Engine/Plugins"), Times.Once);
+        _mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Created destination directory")), It.IsAny<string>()), Times.Once);
+    }
 }

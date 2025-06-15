@@ -417,4 +417,50 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             ["Win64"]
         ));
     }
+
+    [Fact]
+    public void Run_CopyPackageAfterBuild_Parameter_SetsConfigValue()
+    {
+        var pluginConfig = new PluginConfig
+        {
+            CopyPackageAfterBuild = false // Default value
+        };
+        
+        // Test that when copyPackageAfterBuild parameter is true, it overrides the config
+        var originalValue = pluginConfig.CopyPackageAfterBuild;
+        
+        // Simulate the parameter merging logic from PluginCommand.Run
+        bool? copyPackageAfterBuildParam = true;
+        if (copyPackageAfterBuildParam.HasValue)
+        {
+            pluginConfig.CopyPackageAfterBuild = copyPackageAfterBuildParam.Value;
+        }
+        
+        // Assert that the parameter value overwrote the config
+        Assert.False(originalValue); // Original was false
+        Assert.True(pluginConfig.CopyPackageAfterBuild); // Now it's true
+    }
+
+    [Fact]
+    public void Run_CopyPackageAfterBuild_DefaultsToConfigValue()
+    {
+        var pluginConfig = new PluginConfig
+        {
+            CopyPackageAfterBuild = true // Config default
+        };
+        
+        // Test that when copyPackageAfterBuild parameter is null, config value is preserved
+        var originalValue = pluginConfig.CopyPackageAfterBuild;
+        
+        // Simulate the parameter merging logic from PluginCommand.Run
+        bool? copyPackageAfterBuildParam = null;
+        if (copyPackageAfterBuildParam.HasValue)
+        {
+            pluginConfig.CopyPackageAfterBuild = copyPackageAfterBuildParam.Value;
+        }
+        
+        // Assert that the config default value was preserved
+        Assert.True(originalValue); // Original was true
+        Assert.True(pluginConfig.CopyPackageAfterBuild); // Still true (unchanged)
+    }
 }

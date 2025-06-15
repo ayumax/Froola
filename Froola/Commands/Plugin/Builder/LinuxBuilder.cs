@@ -29,8 +29,11 @@ public class LinuxBuilder(
     protected override EditorPlatform MyEditorPlatform => EditorPlatform.Linux;
 
     private const string PROJECT_DIR_IN_DOCKER = "/home/ue4/project";
+    private const string UePluginsDirInDocker = "/home/ue4/UnrealEngine/Engine/Plugins";
     private string _repoPathInWindows = "";
+    private string? _pluginsStagePathInWindows;
     private readonly PluginConfig _pluginConfig = pluginConfig;
+    private readonly LinuxConfig _linuxConfig = linuxConfig;
     private readonly IFileSystem _fileSystem = fileSystem;
 
 
@@ -78,6 +81,12 @@ public class LinuxBuilder(
                 result.StatusOfPackage = await PackageBuildAsync(engineVersion)
                     ? BuildStatus.Success
                     : BuildStatus.Failed;
+
+                // Copy package to destination if configured
+                if (result.StatusOfPackage == BuildStatus.Success && _pluginConfig.CopyPackageAfterBuild)
+                {
+                    await CopyPackageToDestination(engineVersion);
+                }
             }
 
             return result;
@@ -90,7 +99,7 @@ public class LinuxBuilder(
     }
 
     /// <inheritdoc cref="IBuilder" />
-    public override Task PrepareRepository(string baseRepositoryPath, UEVersion engineVersion)
+    public override async Task PrepareRepository(string baseRepositoryPath, UEVersion engineVersion)
     {
         _repoPathInWindows = Path.Combine(baseRepositoryPath, "..", "Linux");
 
@@ -106,6 +115,41 @@ public class LinuxBuilder(
                 $"Copying files from {baseRepositoryPath} to Linux Docker volume at {_repoPathInWindows}");
             _fileSystem.CopyDirectory(baseRepositoryPath, _repoPathInWindows);
 
+            // Prepare custom plugins if configured
+            if (linuxConfig.CopyPluginsToDocker)
+            {
+                // Get version-specific plugin path or fall back to default
+                string pluginSourcePath = string.Empty;
+                
+                if (linuxConfig.DockerPluginsSourcePathsWithVersion.TryGetValue(engineVersion, out var versionSpecificPath))
+                {
+                    pluginSourcePath = versionSpecificPath;
+                    logger.LogInformation($"Using version-specific plugin path for UE {engineVersion}: {pluginSourcePath}");
+                }
+                else if (!string.IsNullOrWhiteSpace(linuxConfig.DockerPluginsSourcePath))
+                {
+                    pluginSourcePath = linuxConfig.DockerPluginsSourcePath;
+                    logger.LogInformation($"Using default plugin path: {pluginSourcePath}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(pluginSourcePath))
+                {
+                    logger.LogInformation("Preparing custom plugins for Docker");
+                    _pluginsStagePathInWindows = await dockerRunner.PreparePluginsForDockerAsync(
+                        pluginSourcePath,
+                        _repoPathInWindows);
+                    
+                    if (_pluginsStagePathInWindows == null)
+                    {
+                        logger.LogWarning("Failed to prepare custom plugins, continuing without them");
+                    }
+                }
+                else
+                {
+                    logger.LogInformation("No plugin source path configured for this version, skipping plugin copy");
+                }
+            }
+
             logger.LogInformation($"Linux repository prepared at (Docker volume): {_repoPathInWindows}");
         }
         catch (Exception ex)
@@ -114,8 +158,6 @@ public class LinuxBuilder(
         }
 
         RepositoryPath = PROJECT_DIR_IN_DOCKER;
-
-        return Task.CompletedTask; 
     }
 
     /// <summary>
@@ -177,6 +219,12 @@ public class LinuxBuilder(
             { _repoPathInWindows, PROJECT_DIR_IN_DOCKER }
         };
 
+        // Add plugins volume mapping if plugins were prepared
+        if (!string.IsNullOrEmpty(_pluginsStagePathInWindows))
+        {
+            volumeMappings.Add(_pluginsStagePathInWindows, UePluginsDirInDocker);
+        }
+
         var dockerImage = GetDockerImageName(engineVersion).ToLowerInvariant();
 
         var command = $"{BuildBatPath} {BuildProjectArgs}";
@@ -221,6 +269,12 @@ public class LinuxBuilder(
         {
             { _repoPathInWindows, PROJECT_DIR_IN_DOCKER }
         };
+
+        // Add plugins volume mapping if plugins were prepared
+        if (!string.IsNullOrEmpty(_pluginsStagePathInWindows))
+        {
+            volumeMappings.Add(_pluginsStagePathInWindows, UePluginsDirInDocker);
+        }
 
         var dockerImage = GetDockerImageName(engineVersion).ToLowerInvariant();
 
@@ -278,6 +332,12 @@ public class LinuxBuilder(
             { _repoPathInWindows, PROJECT_DIR_IN_DOCKER }
         };
 
+        // Add plugins volume mapping if plugins were prepared
+        if (!string.IsNullOrEmpty(_pluginsStagePathInWindows))
+        {
+            volumeMappings.Add(_pluginsStagePathInWindows, UePluginsDirInDocker);
+        }
+
         var dockerImage = GetDockerImageName(engineVersion).ToLowerInvariant();
 
         var command = $"\"{RunUatBatPath}\" {buildPluginArgs}";
@@ -313,5 +373,65 @@ public class LinuxBuilder(
             $"Package build result: {(statusOfPackage ? "SUCCESS" : "FAILURE")}");
 
         return statusOfPackage;
+    }
+
+    /// <summary>
+    ///     Copies the packaged plugin to the configured destination path for use with future Docker builds
+    /// </summary>
+    /// <param name="engineVersion">Engine version</param>
+    private async Task CopyPackageToDestination(UEVersion engineVersion)
+    {
+        try
+        {
+            // Get version-specific destination path or fall back to default
+            string destinationPath = string.Empty;
+            
+            if (_linuxConfig.CopyPackageDestinationPathsWithVersion.TryGetValue(engineVersion, out var versionSpecificPath))
+            {
+                destinationPath = versionSpecificPath;
+                logger.LogInformation($"Using version-specific destination path for UE {engineVersion}: {destinationPath}");
+            }
+
+            if (string.IsNullOrWhiteSpace(destinationPath))
+            {
+                logger.LogWarning("No destination path configured for plugin copy, skipping copy operation");
+                return;
+            }
+
+            // Find the packaged plugin directory in the local PackageDir (already copied from Docker)
+            var localPackagedPluginDir = Path.Combine(PackageDir, _pluginConfig.PluginName);
+            if (!_fileSystem.DirectoryExists(localPackagedPluginDir))
+            {
+                logger.LogWarning($"Packaged plugin directory not found locally: {localPackagedPluginDir}");
+                return;
+            }
+
+            // Create destination directory if it doesn't exist
+            if (!_fileSystem.DirectoryExists(destinationPath))
+            {
+                _fileSystem.CreateDirectory(destinationPath);
+                logger.LogInformation($"Created destination directory: {destinationPath}");
+            }
+
+            var pluginDestinationPath = Path.Combine(destinationPath, _pluginConfig.PluginName);
+            
+            // Remove existing plugin if it exists
+            if (_fileSystem.DirectoryExists(pluginDestinationPath))
+            {
+                _fileSystem.DeleteDirectory(pluginDestinationPath, true);
+                logger.LogInformation($"Removed existing plugin at: {pluginDestinationPath}");
+            }
+
+            // Copy the packaged plugin to the staging area
+            _fileSystem.CopyDirectory(localPackagedPluginDir, pluginDestinationPath);
+            logger.LogInformation($"Successfully copied packaged plugin from {localPackagedPluginDir} to {pluginDestinationPath}");
+            logger.LogInformation($"Plugin is now available in the staging area. Configure LinuxConfig.DockerPluginsSourcePaths[\"{engineVersion.ToVersionString()}\"] = \"{destinationPath}\" to use it in future Docker builds via CopyPluginsToDocker.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Failed to copy packaged plugin: {ex.Message}", ex);
+        }
+
+        await Task.CompletedTask;
     }
 }

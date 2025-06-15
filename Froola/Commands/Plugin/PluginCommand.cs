@@ -51,6 +51,7 @@ public class PluginCommand(
     /// <param name="packagePlatforms">-g,Game platforms</param>
     /// <param name="keepBinaryDirectory">d,Exclude the binary directory.</param>
     /// <param name="isZipped">z,Create a zip archive of the release directory</param>
+    /// <param name="copyPackageAfterBuild">r,Copy packaged plugin to configured destination paths</param>
     /// <param name="cancellationToken">token for cancellation</param>
     [Command("plugin")]
     [SuppressMessage("ReSharper", "ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator")]
@@ -69,6 +70,7 @@ public class PluginCommand(
         [EnumArray(typeof(GamePlatform))] string[]? packagePlatforms = null,
         bool? keepBinaryDirectory = null,
         bool? isZipped = null,
+        bool? copyPackageAfterBuild = null,
         CancellationToken cancellationToken = default)
     {
         _pluginConfig = new PluginConfig
@@ -90,7 +92,8 @@ public class PluginCommand(
                 : new OptionList<GamePlatform>(
                     packagePlatforms.Select(x => Enum.Parse<GamePlatform>(x, true)).ToArray()),
             KeepBinaryDirectory = keepBinaryDirectory ?? configOptions.Value.KeepBinaryDirectory,
-            IsZipped = isZipped ?? configOptions.Value.IsZipped
+            IsZipped = isZipped ?? configOptions.Value.IsZipped,
+            CopyPackageAfterBuild = copyPackageAfterBuild ?? configOptions.Value.CopyPackageAfterBuild
         }.Build();
 
         _gitConfig = new GitConfig

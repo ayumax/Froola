@@ -105,4 +105,105 @@ public class DockerRunnerTests
         loggerMock.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains(command)), It.IsAny<string>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task PreparePluginsForDockerAsync_ReturnsNull_WhenSourcePathIsEmpty()
+    {
+        // Arrange
+        var loggerMock = new Mock<IFroolaLogger<DockerRunner>>();
+        var fileSystemMock = new Mock<IFileSystem>();
+        var processRunnerMock = new Mock<IProcessRunner>();
+        var linuxConfig = new LinuxConfig { DockerCommand = "docker" };
+        var runner = new DockerRunner(loggerMock.Object, fileSystemMock.Object, processRunnerMock.Object,
+            linuxConfig);
+
+        // Act
+        var result = await runner.PreparePluginsForDockerAsync("", "C:/project");
+
+        // Assert
+        Assert.Null(result);
+        loggerMock.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("empty")), It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PreparePluginsForDockerAsync_ReturnsNull_WhenSourceDirectoryDoesNotExist()
+    {
+        // Arrange
+        var loggerMock = new Mock<IFroolaLogger<DockerRunner>>();
+        var fileSystemMock = new Mock<IFileSystem>();
+        var processRunnerMock = new Mock<IProcessRunner>();
+        var linuxConfig = new LinuxConfig { DockerCommand = "docker" };
+        var runner = new DockerRunner(loggerMock.Object, fileSystemMock.Object, processRunnerMock.Object,
+            linuxConfig);
+        const string sourcePath = "C:/plugins";
+        
+        fileSystemMock.Setup(f => f.DirectoryExists(sourcePath)).Returns(false);
+
+        // Act
+        var result = await runner.PreparePluginsForDockerAsync(sourcePath, "C:/project");
+
+        // Assert
+        Assert.Null(result);
+        loggerMock.Verify(l => l.LogError(It.Is<string>(s => s.Contains(sourcePath)), It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PreparePluginsForDockerAsync_ReturnsStagePathWhenSuccessful()
+    {
+        // Arrange
+        var loggerMock = new Mock<IFroolaLogger<DockerRunner>>();
+        var fileSystemMock = new Mock<IFileSystem>();
+        var processRunnerMock = new Mock<IProcessRunner>();
+        var linuxConfig = new LinuxConfig { DockerCommand = "docker" };
+        var runner = new DockerRunner(loggerMock.Object, fileSystemMock.Object, processRunnerMock.Object,
+            linuxConfig);
+        const string sourcePath = "C:/plugins";
+        const string projectDir = "C:/project";
+        var expectedStagePath = Path.Combine(projectDir, "PluginsStage");
+        
+        fileSystemMock.Setup(f => f.DirectoryExists(sourcePath)).Returns(true);
+        fileSystemMock.Setup(f => f.DirectoryExists(expectedStagePath)).Returns(false);
+        fileSystemMock.Setup(f => f.CreateDirectory(expectedStagePath));
+        fileSystemMock.Setup(f => f.CopyDirectory(sourcePath, expectedStagePath));
+
+        // Act
+        var result = await runner.PreparePluginsForDockerAsync(sourcePath, projectDir);
+
+        // Assert
+        Assert.Equal(expectedStagePath, result);
+        fileSystemMock.Verify(f => f.CopyDirectory(sourcePath, expectedStagePath), Times.Once);
+        loggerMock.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Successfully prepared")), It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PreparePluginsForDockerAsync_CleansExistingStageDirectory()
+    {
+        // Arrange
+        var loggerMock = new Mock<IFroolaLogger<DockerRunner>>();
+        var fileSystemMock = new Mock<IFileSystem>();
+        var processRunnerMock = new Mock<IProcessRunner>();
+        var linuxConfig = new LinuxConfig { DockerCommand = "docker" };
+        var runner = new DockerRunner(loggerMock.Object, fileSystemMock.Object, processRunnerMock.Object,
+            linuxConfig);
+        const string sourcePath = "C:/plugins";
+        const string projectDir = "C:/project";
+        var expectedStagePath = Path.Combine(projectDir, "PluginsStage");
+        
+        fileSystemMock.Setup(f => f.DirectoryExists(sourcePath)).Returns(true);
+        fileSystemMock.Setup(f => f.DirectoryExists(expectedStagePath)).Returns(true);
+        fileSystemMock.Setup(f => f.DeleteDirectory(expectedStagePath, true));
+        fileSystemMock.Setup(f => f.CreateDirectory(expectedStagePath));
+        fileSystemMock.Setup(f => f.CopyDirectory(sourcePath, expectedStagePath));
+
+        // Act
+        var result = await runner.PreparePluginsForDockerAsync(sourcePath, projectDir);
+
+        // Assert
+        Assert.Equal(expectedStagePath, result);
+        fileSystemMock.Verify(f => f.DeleteDirectory(expectedStagePath, true), Times.Once);
+        fileSystemMock.Verify(f => f.CreateDirectory(expectedStagePath), Times.Once);
+    }
 }
