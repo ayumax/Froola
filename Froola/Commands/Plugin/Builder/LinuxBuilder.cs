@@ -29,7 +29,9 @@ public class LinuxBuilder(
     protected override EditorPlatform MyEditorPlatform => EditorPlatform.Linux;
 
     private const string PROJECT_DIR_IN_DOCKER = "/home/ue4/project";
+    private const string UePluginsDirInDocker = "/home/ue4/UnrealEngine/Engine/Plugins";
     private string _repoPathInWindows = "";
+    private string? _pluginsStagePathInWindows;
     private readonly PluginConfig _pluginConfig = pluginConfig;
     private readonly IFileSystem _fileSystem = fileSystem;
 
@@ -90,7 +92,7 @@ public class LinuxBuilder(
     }
 
     /// <inheritdoc cref="IBuilder" />
-    public override Task PrepareRepository(string baseRepositoryPath, UEVersion engineVersion)
+    public override async Task PrepareRepository(string baseRepositoryPath, UEVersion engineVersion)
     {
         _repoPathInWindows = Path.Combine(baseRepositoryPath, "..", "Linux");
 
@@ -106,6 +108,41 @@ public class LinuxBuilder(
                 $"Copying files from {baseRepositoryPath} to Linux Docker volume at {_repoPathInWindows}");
             _fileSystem.CopyDirectory(baseRepositoryPath, _repoPathInWindows);
 
+            // Prepare custom plugins if configured
+            if (linuxConfig.CopyPluginsToDocker)
+            {
+                // Get version-specific plugin path or fall back to default
+                string pluginSourcePath = string.Empty;
+                
+                if (linuxConfig.DockerPluginsSourcePathsWithVersion.TryGetValue(engineVersion, out var versionSpecificPath))
+                {
+                    pluginSourcePath = versionSpecificPath;
+                    logger.LogInformation($"Using version-specific plugin path for UE {engineVersion}: {pluginSourcePath}");
+                }
+                else if (!string.IsNullOrWhiteSpace(linuxConfig.DockerPluginsSourcePath))
+                {
+                    pluginSourcePath = linuxConfig.DockerPluginsSourcePath;
+                    logger.LogInformation($"Using default plugin path: {pluginSourcePath}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(pluginSourcePath))
+                {
+                    logger.LogInformation("Preparing custom plugins for Docker");
+                    _pluginsStagePathInWindows = await dockerRunner.PreparePluginsForDockerAsync(
+                        pluginSourcePath,
+                        _repoPathInWindows);
+                    
+                    if (_pluginsStagePathInWindows == null)
+                    {
+                        logger.LogWarning("Failed to prepare custom plugins, continuing without them");
+                    }
+                }
+                else
+                {
+                    logger.LogInformation("No plugin source path configured for this version, skipping plugin copy");
+                }
+            }
+
             logger.LogInformation($"Linux repository prepared at (Docker volume): {_repoPathInWindows}");
         }
         catch (Exception ex)
@@ -114,8 +151,6 @@ public class LinuxBuilder(
         }
 
         RepositoryPath = PROJECT_DIR_IN_DOCKER;
-
-        return Task.CompletedTask; 
     }
 
     /// <summary>
@@ -177,6 +212,12 @@ public class LinuxBuilder(
             { _repoPathInWindows, PROJECT_DIR_IN_DOCKER }
         };
 
+        // Add plugins volume mapping if plugins were prepared
+        if (!string.IsNullOrEmpty(_pluginsStagePathInWindows))
+        {
+            volumeMappings.Add(_pluginsStagePathInWindows, UePluginsDirInDocker);
+        }
+
         var dockerImage = GetDockerImageName(engineVersion).ToLowerInvariant();
 
         var command = $"{BuildBatPath} {BuildProjectArgs}";
@@ -221,6 +262,12 @@ public class LinuxBuilder(
         {
             { _repoPathInWindows, PROJECT_DIR_IN_DOCKER }
         };
+
+        // Add plugins volume mapping if plugins were prepared
+        if (!string.IsNullOrEmpty(_pluginsStagePathInWindows))
+        {
+            volumeMappings.Add(_pluginsStagePathInWindows, UePluginsDirInDocker);
+        }
 
         var dockerImage = GetDockerImageName(engineVersion).ToLowerInvariant();
 
@@ -277,6 +324,12 @@ public class LinuxBuilder(
         {
             { _repoPathInWindows, PROJECT_DIR_IN_DOCKER }
         };
+
+        // Add plugins volume mapping if plugins were prepared
+        if (!string.IsNullOrEmpty(_pluginsStagePathInWindows))
+        {
+            volumeMappings.Add(_pluginsStagePathInWindows, UePluginsDirInDocker);
+        }
 
         var dockerImage = GetDockerImageName(engineVersion).ToLowerInvariant();
 

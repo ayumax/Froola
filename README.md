@@ -80,6 +80,40 @@ docker login ghcr.io
 docker pull ghcr.io/epicgames/unreal-engine:dev-slim-5.5.0
 ```
 
+### Docker Custom Plugins Setup (Optional)
+If you have custom Unreal Engine plugins that need to be available in the Docker container during builds, you can configure Froola to mount them:
+
+1. Place your custom plugins in directories on your Windows host machine (e.g., `C:\MyUnrealPlugins\UE5.5`).
+2. Configure the Linux section in `appsettings.json`:
+   
+   **Option A: Version-specific plugin paths (recommended for multiple UE versions)**
+   ```json
+   "Linux": {
+     "DockerCommand": "docker",
+     "DockerImage": "ghcr.io/epicgames/unreal-engine:dev-slim-%v",
+     "CopyPluginsToDocker": true,
+     "DockerPluginsSourcePaths": {
+       "5.5": "C:\\MyUnrealPlugins\\UE5.5",
+       "5.4": "C:\\MyUnrealPlugins\\UE5.4",
+       "5.3": "C:\\MyUnrealPlugins\\UE5.3"
+     }
+   }
+   ```
+   
+   **Option B: Single plugin path for all versions**
+   ```json
+   "Linux": {
+     "DockerCommand": "docker",
+     "DockerImage": "ghcr.io/epicgames/unreal-engine:dev-slim-%v",
+     "CopyPluginsToDocker": true,
+     "DockerPluginsSourcePath": "C:\\MyUnrealPlugins"
+   }
+   ```
+
+3. When Froola runs Linux builds, it will mount the appropriate plugins directory to `/home/ue4/UnrealEngine/Engine/Plugins` in the Docker container.
+
+This feature is useful when your plugin depends on other custom plugins that are not included in the standard Unreal Engine Docker image. The version-specific configuration is especially helpful when plugins need to be compiled differently for different engine versions.
+
 ## Froola Installation and Setup
 1. Download the latest Froola release from GitHub and extract it.
 2. Update the `appsettings.json` file to configure basic settings (e.g., default paths, authentication info, etc.).
@@ -125,7 +159,10 @@ docker pull ghcr.io/epicgames/unreal-engine:dev-slim-5.5.0
   },
   "Linux": {
     "DockerCommand": "docker",
-    "DockerImage": "ghcr.io/epicgames/unreal-engine:dev-slim-%v"
+    "DockerImage": "ghcr.io/epicgames/unreal-engine:dev-slim-%v",
+    "CopyPluginsToDocker": false,
+    "DockerPluginsSourcePath": "",
+    "DockerPluginsSourcePaths": {}
   }
 }
 ```
@@ -163,12 +200,16 @@ Froola.exe init-config -o "path to save config template(*.json)"
 | Windows.WindowsUnrealBasePath        | string     | Windows Unreal Engine installation base path   | "C:\\Program Files\\Epic Games"              |
 | Linux.DockerCommand                  | string     | Docker command ("docker" or "podman")           | "docker"                                     |
 | Linux.DockerImage                    | string     | Docker image (%v will be replaced with UE version)      | "ghcr.io/epicgames/unreal-engine:dev-slim-%v" |
+| Linux.CopyPluginsToDocker            | bool       | Whether to copy custom plugins to Docker UE installation | false                                         |
+| Linux.DockerPluginsSourcePath        | string     | Default path to directory containing custom plugins (※6) | "C:\\MyPlugins"                               |
+| Linux.DockerPluginsSourcePaths       | Key-Value  | UE version-specific plugin paths (※6)          | {"5.5":"C:\\Plugins\\UE5.5","5.4":"C:\\Plugins\\UE5.4"} |
 
 ※1 If Git.GitSshKeyPath is not set, HTTPS will be used for cloning.
 ※2 If Git.LocalRepositoryPath is set, the specified directory will be used base repository path. if so the remote repository will not be cloned.
 ※3 If InitConfig.OutputPath is not set or empty, the current directory will be used for output.
 ※4 Set UE version-specific Xcode paths if you need to use different Xcode versions for different UE versions.
 ※5 If Plugin.ResultPath is not set or empty, the "outputs" directory in the same directory as Froola.exe will be used for output.
+※6 DockerPluginsSourcePaths takes precedence over DockerPluginsSourcePath. If a version is not found in DockerPluginsSourcePaths, DockerPluginsSourcePath will be used as fallback.
 
 ## Usage
 

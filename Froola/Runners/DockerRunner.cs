@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -72,5 +73,49 @@ public class DockerRunner(
         await fileSystem.WriteAllTextAsync(dockerScriptPath, scriptContent);
 
         return Path.Combine(projectDirInDocker, Path.GetFileName(localScriptPath)).Replace('\\', '/');
+    }
+
+    /// <summary>
+    /// Prepares custom plugins for Docker by copying them to a staging directory.
+    /// </summary>
+    /// <param name="sourcePath">The path to the directory containing plugins on the host machine.</param>
+    /// <param name="projectDir">The project directory on the host that's mounted to Docker.</param>
+    /// <returns>Path to the staged plugins directory, or null if operation failed.</returns>
+    public Task<string?> PreparePluginsForDockerAsync(string sourcePath, string projectDir)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            logger.LogInformation("Plugin source path is empty, skipping plugin preparation");
+            return Task.FromResult<string?>(null);
+        }
+
+        if (!fileSystem.DirectoryExists(sourcePath))
+        {
+            logger.LogError($"Plugin source directory not found at {sourcePath}");
+            return Task.FromResult<string?>(null);
+        }
+
+        try
+        {
+            // Create a staging directory for plugins in the project directory
+            var pluginsStageDir = Path.Combine(projectDir, "PluginsStage");
+            if (fileSystem.DirectoryExists(pluginsStageDir))
+            {
+                fileSystem.DeleteDirectory(pluginsStageDir, true);
+            }
+            fileSystem.CreateDirectory(pluginsStageDir);
+
+            // Copy all plugins from source to staging directory
+            logger.LogInformation($"Copying plugins from {sourcePath} to staging directory");
+            fileSystem.CopyDirectory(sourcePath, pluginsStageDir);
+
+            logger.LogInformation($"Successfully prepared plugins for Docker container at {pluginsStageDir}");
+            return Task.FromResult<string?>(pluginsStageDir);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error preparing plugins for Docker: {ex.Message}", ex);
+            return Task.FromResult<string?>(null);
+        }
     }
 }
