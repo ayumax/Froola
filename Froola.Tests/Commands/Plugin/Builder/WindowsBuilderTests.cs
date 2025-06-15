@@ -228,7 +228,8 @@ public class WindowsBuilderTests
             PackageBuildAsyncResult = true
         };
         
-        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+        var expectedUpluginPath = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "Plugin", "TestPlugin.uplugin");
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(expectedUpluginPath, EditorPlatform.Windows, UEVersion.UE_5_3))
             .Returns(BuildStatus.Success);
         
         const UEVersion version = UEVersion.UE_5_3;
@@ -265,11 +266,12 @@ public class WindowsBuilderTests
             PackageBuildAsyncResult = true
         };
         
-        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+        var expectedUpluginPath1 = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "Plugin", "TestPlugin.uplugin");
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(expectedUpluginPath1, EditorPlatform.Windows, UEVersion.UE_5_3))
             .Returns(BuildStatus.Success);
         
         // Setup file system mocks
-        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Windows_UE5.3", "TestPlugin");
+        var packageSourcePath = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "TestPlugin");
         var destinationPath = Path.Combine("C:/TestDestination", "TestPlugin");
         
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
@@ -312,11 +314,12 @@ public class WindowsBuilderTests
             PackageBuildAsyncResult = true
         };
         
-        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+        var expectedUpluginPath = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "Plugin", "TestPlugin.uplugin");
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(expectedUpluginPath, EditorPlatform.Windows, UEVersion.UE_5_3))
             .Returns(BuildStatus.Success);
         
         // Setup file system to return false for package directory existence
-        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Windows_UE5.3", "TestPlugin");
+        var packageSourcePath = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "TestPlugin");
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(false);
         
         const UEVersion version = UEVersion.UE_5_3;
@@ -348,7 +351,8 @@ public class WindowsBuilderTests
             PackageBuildAsyncResult = true
         };
         
-        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+        var expectedUpluginPath = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "Plugin", "TestPlugin.uplugin");
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(expectedUpluginPath, EditorPlatform.Windows, UEVersion.UE_5_3))
             .Returns(BuildStatus.Success);
         
         const UEVersion version = UEVersion.UE_5_3;
@@ -384,11 +388,12 @@ public class WindowsBuilderTests
             PackageBuildAsyncResult = true
         };
         
-        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+        var expectedUpluginPath2 = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "Plugin", "TestPlugin.uplugin");
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(expectedUpluginPath2, EditorPlatform.Windows, UEVersion.UE_5_3))
             .Returns(BuildStatus.Success);
         
         // Setup file system mocks
-        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Windows_UE5.3", "TestPlugin");
+        var packageSourcePath = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "TestPlugin");
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
         _mockFileSystem.Setup(f => f.DirectoryExists("C:/NewDestination")).Returns(false); // Destination doesn't exist
         
@@ -428,11 +433,12 @@ public class WindowsBuilderTests
             PackageBuildAsyncResult = true
         };
         
-        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+        var expectedUpluginPath3 = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "Plugin", "TestPlugin.uplugin");
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(expectedUpluginPath3, EditorPlatform.Windows, UEVersion.UE_5_3))
             .Returns(BuildStatus.Success);
         
         // Setup file system mocks
-        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Windows_UE5.3", "TestPlugin");
+        var packageSourcePath = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "TestPlugin");
         var destinationPath = Path.Combine("C:/TestDestination", "TestPlugin");
         
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
@@ -476,7 +482,8 @@ public class WindowsBuilderTests
         };
         
         // Setup package build to fail
-        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(It.IsAny<string>(), It.IsAny<EditorPlatform>(), It.IsAny<UEVersion>()))
+        var expectedUpluginPath = Path.Combine("C:/tmp", "packages", "Windows_UE5.3", "Plugin", "TestPlugin.uplugin");
+        _mockTestResultsEvaluator.Setup(e => e.EvaluatePackageBuildResults(expectedUpluginPath, EditorPlatform.Windows, UEVersion.UE_5_3))
             .Returns(BuildStatus.Failed);
         
         const UEVersion version = UEVersion.UE_5_3;

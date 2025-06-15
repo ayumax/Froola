@@ -303,7 +303,7 @@ public class MacBuilderTests
         };
         
         // Setup file system mocks
-        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Mac_UE5.3", "TestPlugin");
+        var packageSourcePath = Path.Combine("C:/tmp", "packages", "Mac_UE5.3", "TestPlugin");
         var destinationPath = Path.Combine("/Applications/UE_5.3/Engine/Plugins", "TestPlugin");
         
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
@@ -353,7 +353,7 @@ public class MacBuilderTests
         };
         
         // Setup file system to return false for package directory existence
-        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Mac_UE5.3", "TestPlugin");
+        var packageSourcePath = Path.Combine("C:/tmp", "packages", "Mac_UE5.3", "TestPlugin");
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(false);
         
         const string baseRepo = "C:/src/repo";
@@ -431,7 +431,7 @@ public class MacBuilderTests
         };
         
         // Setup file system mocks
-        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Mac_UE5.3", "TestPlugin");
+        var packageSourcePath = Path.Combine("C:/tmp", "packages", "Mac_UE5.3", "TestPlugin");
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
         _mockFileSystem.Setup(f => f.DirectoryExists("/Applications/NewUE/Engine/Plugins")).Returns(false); // Destination doesn't exist
         
