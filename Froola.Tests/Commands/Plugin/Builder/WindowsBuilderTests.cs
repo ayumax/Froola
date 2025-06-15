@@ -269,7 +269,7 @@ public class WindowsBuilderTests
             .Returns(BuildStatus.Success);
         
         // Setup file system mocks
-        var packageSourcePath = "C:/tmp/packages/Windows_UE5.3/TestPlugin";
+        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Windows_UE5.3", "TestPlugin");
         var destinationPath = Path.Combine("C:/TestDestination", "TestPlugin");
         
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
@@ -316,7 +316,7 @@ public class WindowsBuilderTests
             .Returns(BuildStatus.Success);
         
         // Setup file system to return false for package directory existence
-        var packageSourcePath = "C:/tmp/packages/Windows_UE5.3/TestPlugin";
+        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Windows_UE5.3", "TestPlugin");
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(false);
         
         const UEVersion version = UEVersion.UE_5_3;
@@ -388,7 +388,7 @@ public class WindowsBuilderTests
             .Returns(BuildStatus.Success);
         
         // Setup file system mocks
-        var packageSourcePath = "C:/tmp/packages/Windows_UE5.3/TestPlugin";
+        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Windows_UE5.3", "TestPlugin");
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
         _mockFileSystem.Setup(f => f.DirectoryExists("C:/NewDestination")).Returns(false); // Destination doesn't exist
         
@@ -432,7 +432,7 @@ public class WindowsBuilderTests
             .Returns(BuildStatus.Success);
         
         // Setup file system mocks
-        var packageSourcePath = "C:/tmp/packages/Windows_UE5.3/TestPlugin";
+        var packageSourcePath = Path.Combine("C:", "tmp", "packages", "Windows_UE5.3", "TestPlugin");
         var destinationPath = Path.Combine("C:/TestDestination", "TestPlugin");
         
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);

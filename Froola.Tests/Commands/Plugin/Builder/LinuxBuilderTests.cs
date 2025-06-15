@@ -384,7 +384,7 @@ var builder = new TestableLinuxBuilder(
             .Returns(BuildStatus.Success);
         
         // Setup file system mocks  
-        var packageSourcePath = "/tmp/packages/Linux_UE5.3/TestPlugin";
+        var packageSourcePath = Path.Combine("/tmp", "packages", "Linux_UE5.3", "TestPlugin");
         var destinationPath = Path.Combine("C:/TempPlugins", "TestPlugin");
         
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
@@ -504,7 +504,7 @@ var builder = new TestableLinuxBuilder(
             .Returns(BuildStatus.Success);
         
         // Setup file system mocks  
-        var packageSourcePath = "/tmp/packages/Linux_UE5.3/TestPlugin";
+        var packageSourcePath = Path.Combine("/tmp", "packages", "Linux_UE5.3", "TestPlugin");
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
         _mockFileSystem.Setup(f => f.DirectoryExists("C:/NewTempPlugins")).Returns(false); // Destination doesn't exist
         
@@ -548,7 +548,7 @@ var builder = new TestableLinuxBuilder(
             .Returns(BuildStatus.Success);
         
         // Setup file system mocks  
-        var packageSourcePath = "/tmp/packages/Linux_UE5.3/TestPlugin";
+        var packageSourcePath = Path.Combine("/tmp", "packages", "Linux_UE5.3", "TestPlugin");
         var destinationPath = Path.Combine("C:/TempPlugins", "TestPlugin");
         
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
@@ -633,7 +633,7 @@ var builder = new TestableLinuxBuilder(
             .Returns(BuildStatus.Success);
         
         // Setup file system mocks  
-        var packageSourcePath = "/tmp/packages/Linux_UE5.3/TestPlugin";
+        var packageSourcePath = Path.Combine("/tmp", "packages", "Linux_UE5.3", "TestPlugin");
         _mockFileSystem.Setup(f => f.DirectoryExists(packageSourcePath)).Returns(true);
         _mockFileSystem.Setup(f => f.DirectoryExists("C:/TempPlugins")).Returns(true);
         
