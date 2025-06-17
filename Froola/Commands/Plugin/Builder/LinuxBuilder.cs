@@ -118,22 +118,15 @@ public class LinuxBuilder(
             // Prepare custom plugins if configured
             if (linuxConfig.CopyPluginsToDocker)
             {
-                // Get version-specific plugin path or fall back to default
-                string pluginSourcePath = string.Empty;
+                var pluginSourcePath = GetEngineTargetPluginDirectory(engineVersion, false);
                 
-                if (linuxConfig.DockerPluginsSourcePathsWithVersion.TryGetValue(engineVersion, out var versionSpecificPath))
-                {
-                    pluginSourcePath = versionSpecificPath;
-                    logger.LogInformation($"Using version-specific plugin path for UE {engineVersion}: {pluginSourcePath}");
-                }
-                else if (!string.IsNullOrWhiteSpace(linuxConfig.DockerPluginsSourcePath))
-                {
-                    pluginSourcePath = linuxConfig.DockerPluginsSourcePath;
-                    logger.LogInformation($"Using default plugin path: {pluginSourcePath}");
-                }
-
                 if (!string.IsNullOrWhiteSpace(pluginSourcePath))
                 {
+                    if (!Path.IsPathRooted(pluginSourcePath))
+                    {
+                        pluginSourcePath = Path.GetFullPath(pluginSourcePath);
+                    }
+                    
                     logger.LogInformation("Preparing custom plugins for Docker");
                     _pluginsStagePathInWindows = await dockerRunner.PreparePluginsForDockerAsync(
                         pluginSourcePath,
@@ -151,6 +144,16 @@ public class LinuxBuilder(
             }
 
             logger.LogInformation($"Linux repository prepared at (Docker volume): {_repoPathInWindows}");
+
+            if (_pluginConfig.CopyPackageAfterBuild)
+            {
+                var pluginDestinationPath = GetEngineTargetPluginDirectory(engineVersion, true);
+                if (_fileSystem.DirectoryExists(pluginDestinationPath))
+                {
+                    logger.LogInformation($"Removing existing plugin at: {pluginDestinationPath}");
+                    _fileSystem.DeleteDirectory(pluginDestinationPath, true);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -383,38 +386,16 @@ public class LinuxBuilder(
     {
         try
         {
-            // Get version-specific destination path or fall back to default
-            string destinationPath = string.Empty;
-            
-            if (_linuxConfig.CopyPackageDestinationPathsWithVersion.TryGetValue(engineVersion, out var versionSpecificPath))
-            {
-                destinationPath = versionSpecificPath;
-                logger.LogInformation($"Using version-specific destination path for UE {engineVersion}: {destinationPath}");
-            }
-
-            if (string.IsNullOrWhiteSpace(destinationPath))
-            {
-                logger.LogWarning("No destination path configured for plugin copy, skipping copy operation");
-                return;
-            }
+            var pluginDestinationPath = GetEngineTargetPluginDirectory(engineVersion, true);
 
             // Find the packaged plugin directory in the local PackageDir (already copied from Docker)
-            var localPackagedPluginDir = Path.Combine(PackageDir, _pluginConfig.PluginName);
+            var localPackagedPluginDir = Path.Combine(PackageDir, "Plugin");
             if (!_fileSystem.DirectoryExists(localPackagedPluginDir))
             {
                 logger.LogWarning($"Packaged plugin directory not found locally: {localPackagedPluginDir}");
                 return;
             }
 
-            // Create destination directory if it doesn't exist
-            if (!_fileSystem.DirectoryExists(destinationPath))
-            {
-                _fileSystem.CreateDirectory(destinationPath);
-                logger.LogInformation($"Created destination directory: {destinationPath}");
-            }
-
-            var pluginDestinationPath = Path.Combine(destinationPath, _pluginConfig.PluginName);
-            
             // Remove existing plugin if it exists
             if (_fileSystem.DirectoryExists(pluginDestinationPath))
             {
@@ -422,10 +403,12 @@ public class LinuxBuilder(
                 logger.LogInformation($"Removed existing plugin at: {pluginDestinationPath}");
             }
 
+            _fileSystem.CreateDirectory(pluginDestinationPath);
+
             // Copy the packaged plugin to the staging area
             _fileSystem.CopyDirectory(localPackagedPluginDir, pluginDestinationPath);
             logger.LogInformation($"Successfully copied packaged plugin from {localPackagedPluginDir} to {pluginDestinationPath}");
-            logger.LogInformation($"Plugin is now available in the staging area. Configure LinuxConfig.DockerPluginsSourcePaths[\"{engineVersion.ToVersionString()}\"] = \"{destinationPath}\" to use it in future Docker builds via CopyPluginsToDocker.");
+            
         }
         catch (Exception ex)
         {
@@ -433,5 +416,29 @@ public class LinuxBuilder(
         }
 
         await Task.CompletedTask;
+    }
+
+    private string GetEngineTargetPluginDirectory(UEVersion engineVersion, bool addMyPluginNameFolder)
+    {
+        // Get version-specific destination path or fall back to default
+        var destinationPath = Path.Combine(_linuxConfig.DockerPluginsSourcePath, engineVersion.ToVersionString());
+
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            logger.LogWarning("No destination path configured for plugin copy, skipping copy operation");
+            return string.Empty;
+        }
+
+        if (!Path.IsPathRooted(destinationPath))
+        {
+            destinationPath = Path.GetFullPath(destinationPath);
+        }
+
+        if (!addMyPluginNameFolder)
+        {
+            return destinationPath;
+        }
+
+        return Path.Combine(destinationPath, _pluginConfig.PluginName);
     }
 }

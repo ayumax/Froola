@@ -15,6 +15,14 @@ public interface IMacUnrealEngineRunner
     Task<bool> MakeDirectory(string path);
 
     /// <summary>
+    ///     Copy directory
+    /// </summary>
+    /// <param name="sourcePath">source directory path</param>
+    /// <param name="destinationPath">destination directory path</param>
+    /// <returns></returns>
+    Task<bool> CopyDirectory(string sourcePath, string destinationPath);
+
+    /// <summary>
     /// Checks if a directory exists on the remote Mac.
     /// </summary>
     Task<bool> DirectoryExists(string path);

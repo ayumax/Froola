@@ -105,12 +105,6 @@ public class MacBuilder(
                     result.StatusOfPackage = await PackageBuildAsync(engineVersion)
                         ? BuildStatus.Success
                         : BuildStatus.Failed;
-
-                    // Copy package to destination if configured
-                    if (result.StatusOfPackage == BuildStatus.Success && _pluginConfig.CopyPackageAfterBuild)
-                    {
-                        await CopyPackageToDestination(engineVersion);
-                    }
                 }
 
                 return result;
@@ -168,6 +162,16 @@ public class MacBuilder(
             }
 
             logger.LogInformation($"Mac repository prepared at: {RepositoryPath}");
+
+            if (_pluginConfig.CopyPackageAfterBuild)
+            {
+                var pluginDestinationPath = GetEngineTargetPluginDirectory(engineVersion);
+                if (await macUeRunner.DirectoryExists(pluginDestinationPath))
+                {
+                    await macUeRunner.DeleteDirectory(pluginDestinationPath);
+                    logger.LogInformation($"Removed existing plugin at: {pluginDestinationPath}");
+                }
+            }
 
             _isReady = true;
         }
@@ -325,58 +329,42 @@ public class MacBuilder(
         logger.LogInformation(
             $"Package build result: {(statusOfPackage ? "SUCCESS" : "FAILURE")}");
 
+        if (!statusOfPackage || !_pluginConfig.CopyPackageAfterBuild)
+        {
+            return false;
+        }
+
+        await CopyPackageToDestination(engineVersion, macPackagePath);
+            
         return statusOfPackage;
     }
 
-    /// <summary>
-    ///     Copies the packaged plugin to the configured destination path
-    /// </summary>
-    /// <param name="engineVersion">Engine version</param>
-    private async Task CopyPackageToDestination(UEVersion engineVersion)
+    private async Task CopyPackageToDestination(UEVersion engineVersion, string macPackagePath)
     {
         try
         {
-            // Get version-specific destination path or fall back to default
-            var destinationPath = string.Empty;
-            
-            if (_macConfig.CopyPackageDestinationPathsWithVersion.TryGetValue(engineVersion, out var versionSpecificPath))
-            {
-                destinationPath = versionSpecificPath;
-                logger.LogInformation($"Using version-specific destination path for UE {engineVersion}: {destinationPath}");
-            }
-
-            if (string.IsNullOrWhiteSpace(destinationPath))
-            {
-                logger.LogWarning("No destination path configured for plugin copy, skipping copy operation");
-                return;
-            }
-
-            // Check if the packaged plugin exists in the local PackageDir (already downloaded)
-            var localPackagedPluginDir = Path.Combine(PackageDir, _pluginConfig.PluginName);
-            if (!fileSystem.DirectoryExists(localPackagedPluginDir))
+            var pluginDestinationPath = GetEngineTargetPluginDirectory(engineVersion);
+        
+            // Check if the packaged plugin exists in the local PackageDir
+            var localPackagedPluginDir = $"{macPackagePath}/Plugin";
+            if (!await macUeRunner.DirectoryExists(localPackagedPluginDir))
             {
                 logger.LogWarning($"Packaged plugin directory not found locally: {localPackagedPluginDir}");
                 return;
             }
-
-            // Create destination directory if it doesn't exist
-            if (!fileSystem.DirectoryExists(destinationPath))
-            {
-                fileSystem.CreateDirectory(destinationPath);
-                logger.LogInformation($"Created destination directory: {destinationPath}");
-            }
-
-            var pluginDestinationPath = Path.Combine(destinationPath, _pluginConfig.PluginName);
             
             // Remove existing plugin if it exists
-            if (fileSystem.DirectoryExists(pluginDestinationPath))
+            if (await macUeRunner.DirectoryExists(pluginDestinationPath))
             {
-                fileSystem.DeleteDirectory(pluginDestinationPath, true);
+                await macUeRunner.DeleteDirectory(pluginDestinationPath);
                 logger.LogInformation($"Removed existing plugin at: {pluginDestinationPath}");
             }
 
+            await macUeRunner.MakeDirectory(pluginDestinationPath);
+
             // Copy the packaged plugin from local PackageDir to destination
-            fileSystem.CopyDirectory(localPackagedPluginDir, pluginDestinationPath);
+            await macUeRunner.CopyDirectory(localPackagedPluginDir, pluginDestinationPath);
+            
             logger.LogInformation($"Successfully copied packaged plugin from {localPackagedPluginDir} to {pluginDestinationPath}");
         }
         catch (Exception ex)
@@ -385,5 +373,25 @@ public class MacBuilder(
         }
 
         await Task.CompletedTask;
+    }
+
+    private string GetEngineTargetPluginDirectory(UEVersion engineVersion)
+    {
+        // Get version-specific destination path or fall back to default
+        var destinationPath = string.Empty;
+
+        if (_macConfig.CopyPackageDestinationPathsWithVersion.TryGetValue(engineVersion, out var versionSpecificPath))
+        {
+            destinationPath = versionSpecificPath;
+            logger.LogInformation($"Using version-specific destination path for UE {engineVersion}: {destinationPath}");
+        }
+
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            logger.LogWarning("No destination path configured for plugin copy, skipping copy operation");
+            return string.Empty;
+        }
+
+        return $"{destinationPath}/{_pluginConfig.PluginName}";
     }
 }
