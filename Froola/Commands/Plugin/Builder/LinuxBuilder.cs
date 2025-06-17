@@ -134,6 +134,11 @@ public class LinuxBuilder(
 
                 if (!string.IsNullOrWhiteSpace(pluginSourcePath))
                 {
+                    if (!Path.IsPathRooted(pluginSourcePath))
+                    {
+                        pluginSourcePath = Path.GetFullPath(pluginSourcePath);
+                    }
+                    
                     logger.LogInformation("Preparing custom plugins for Docker");
                     _pluginsStagePathInWindows = await dockerRunner.PreparePluginsForDockerAsync(
                         pluginSourcePath,
@@ -398,8 +403,13 @@ public class LinuxBuilder(
                 return;
             }
 
+            if (!Path.IsPathRooted(destinationPath))
+            {
+                destinationPath = Path.GetFullPath(destinationPath);
+            }
+
             // Find the packaged plugin directory in the local PackageDir (already copied from Docker)
-            var localPackagedPluginDir = Path.Combine(PackageDir, _pluginConfig.PluginName);
+            var localPackagedPluginDir = Path.Combine(PackageDir, "Plugin");
             if (!_fileSystem.DirectoryExists(localPackagedPluginDir))
             {
                 logger.LogWarning($"Packaged plugin directory not found locally: {localPackagedPluginDir}");

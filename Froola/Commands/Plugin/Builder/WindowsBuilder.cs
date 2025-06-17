@@ -244,7 +244,7 @@ public class WindowsBuilder(
             }
 
             // Find the packaged plugin directory
-            var packagedPluginDir = Path.Combine(PackageDir, _pluginConfig.PluginName);
+            var packagedPluginDir = Path.Combine(PackageDir, "Plugin");
             if (!_fileSystem.DirectoryExists(packagedPluginDir))
             {
                 logger.LogWarning($"Packaged plugin directory not found: {packagedPluginDir}");

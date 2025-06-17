@@ -24,6 +24,37 @@ public class MacUnrealEngineRunner(ISshConnection sshConnection) : IMacUnrealEng
     }
 
     /// <summary>
+    ///     Copies a directory from source to destination on the remote Mac.
+    /// </summary>
+    public async Task<bool> CopyDirectory(string sourcePath, string destinationPath)
+    {
+        try
+        {
+            // Check if source directory exists
+            if (!await DirectoryExists(sourcePath))
+            {
+                return false;
+            }
+
+            if (!await sshConnection.EnsureDirectoryExists(destinationPath))
+            {
+                await sshConnection.MakeDirectory(destinationPath);
+            }
+
+            // Use cp command with recursive flag to copy the directory
+            var command = $"cp -R '{sourcePath}' '{destinationPath}'";
+            var result = await sshConnection.SendCommand(command);
+
+            // Verify that the copy was successful by checking if destination exists
+            return await DirectoryExists(destinationPath);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Checks if a directory exists on the remote Mac.
     /// </summary>
     public async Task<bool> DirectoryExists(string path)
