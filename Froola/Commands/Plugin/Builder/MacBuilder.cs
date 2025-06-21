@@ -330,7 +330,7 @@ public class MacBuilder(
 
         if (!statusOfPackage || !_pluginConfig.CopyPackageAfterBuild)
         {
-            return false;
+            return statusOfPackage;
         }
 
         await CopyPackageToDestination(engineVersion, macPackagePath);
