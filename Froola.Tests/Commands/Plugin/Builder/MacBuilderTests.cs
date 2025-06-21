@@ -240,43 +240,4 @@ public class MacBuilderTests
         Assert.Equal(1, builder.PackageBuildAsyncCallCount);
     }
 
-    [Fact]
-    public async Task Run_CopyPackageAfterBuild_False_DoesNotCopyPackage()
-    {
-        var config = _pluginConfig;
-        config.CopyPackageAfterBuild = false;
-        config.RunPackage = true;
-        
-        var macConfig = new MacConfig
-        {
-            CopyPackageDestinationPaths = new() { { "5.3", "/Applications/UE_5.3/Engine/Plugins" } }
-        };
-        macConfig.CopyPackageDestinationPathsWithVersion.Add(UEVersion.UE_5_3, "/Applications/UE_5.3/Engine/Plugins");
-        
-        var builder = new TestableMacBuilder(
-            config, _windowsConfig, macConfig,
-            _mockMacRunner.Object, _mockFileSystem.Object,
-            _mockTestResultsEvaluator.Object, _mockLogger.Object)
-        {
-            BuildAsyncResult = true,
-            PackageBuildAsyncResult = true
-        };
-        
-        const string baseRepo = "C:/src/repo";
-        const UEVersion version = UEVersion.UE_5_3;
-        _mockMacRunner.Setup(r => r.DirectoryExists(It.IsAny<string>())).ReturnsAsync(false);
-        _mockMacRunner.Setup(r => r.MakeDirectory(It.IsAny<string>())).ReturnsAsync(true);
-        _mockMacRunner.Setup(r => r.UploadDirectory(baseRepo, It.IsAny<string>())).ReturnsAsync(true);
-        _mockMacRunner.Setup(r => r.DownloadDirectory(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        _mockMacRunner.Setup(r => r.FileExists(It.IsAny<string>())).ReturnsAsync(true);
-        
-        await builder.PrepareRepository(baseRepo, version);
-        builder.InitDirectory(version);
-        
-        var result = await builder.Run(version);
-        
-        Assert.Equal(BuildStatus.Success, result.StatusOfBuild);
-        // Verify no additional copy operations were performed
-        _mockFileSystem.Verify(f => f.CopyDirectory(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-    }
 }

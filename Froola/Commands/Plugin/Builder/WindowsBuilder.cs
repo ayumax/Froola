@@ -275,29 +275,8 @@ public class WindowsBuilder(
     private string GetEngineTargetPluginDirectory(UEVersion engineVersion)
     {
         // Get version-specific destination path or fall back to default
-        var destinationPath = string.Empty;
-
-        if (_windowsConfig.CopyPackageDestinationPathsWithVersion.TryGetValue(engineVersion,
-                out var versionSpecificPath))
-        {
-            destinationPath = versionSpecificPath;
-            logger.LogInformation($"Using version-specific destination path for UE {engineVersion}: {destinationPath}");
-        }
-
-        if (string.IsNullOrWhiteSpace(destinationPath))
-        {
-            logger.LogWarning("No destination path configured for plugin copy, skipping copy operation");
-            return string.Empty;
-        }
-
-        // Create destination directory if it doesn't exist
-        if (!_fileSystem.DirectoryExists(destinationPath))
-        {
-            _fileSystem.CreateDirectory(destinationPath);
-            logger.LogInformation($"Created destination directory: {destinationPath}");
-        }
-
-        return Path.Combine(destinationPath, _pluginConfig.PluginName);
+        return Path.Combine(_windowsConfig.WindowsUnrealBasePath, $"UE_{engineVersion.ToVersionString()}",
+            @"Engine\Plugins\AyumaxSoft", _pluginConfig.PluginName);
     }
 
     /// <summary>
