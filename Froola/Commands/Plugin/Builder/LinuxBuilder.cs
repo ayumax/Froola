@@ -30,7 +30,7 @@ public class LinuxBuilder(
 
     private const string PROJECT_DIR_IN_DOCKER = "/home/ue4/project";
 
-    private const string UePluginsDirInDocker = "/home/ue4/UnrealEngine/Engine/Plugins/AyumaxSoft" +
+    private const string UePluginsDirInDocker = "/home/ue4/UnrealEngine/Engine/Plugins/Marketplace" +
                                                 "";
     private string _repoPathInWindows = "";
     private readonly PluginConfig _pluginConfig = pluginConfig;

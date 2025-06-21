@@ -379,6 +379,6 @@ public class MacBuilder(
     {
         // Get version-specific destination path or fall back to default
         return
-            $"{_macConfig.MacUnrealBasePath}/UE_{engineVersion.ToVersionString()}/Engine/Plugins/AyumaxSoft/{_pluginConfig.PluginName}";
+            $"{_macConfig.MacUnrealBasePath}/UE_{engineVersion.ToVersionString()}/Engine/Plugins/Marketplace/{_pluginConfig.PluginName}";
     }
 }

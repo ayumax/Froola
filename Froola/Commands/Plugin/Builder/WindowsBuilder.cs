@@ -276,7 +276,7 @@ public class WindowsBuilder(
     {
         // Get version-specific destination path or fall back to default
         return Path.Combine(_windowsConfig.WindowsUnrealBasePath, $"UE_{engineVersion.ToVersionString()}",
-            @"Engine\Plugins\AyumaxSoft", _pluginConfig.PluginName);
+            @"Engine\Plugins\Marketplace", _pluginConfig.PluginName);
     }
 
     /// <summary>
