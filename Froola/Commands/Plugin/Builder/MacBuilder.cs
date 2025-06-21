@@ -66,7 +66,7 @@ public class MacBuilder(
             }
 
             logger.LogInformation($"Found project file: {ProjectFilePath}");
-            
+
             var macResultDir = $"{RepositoryPath}/TestResults";
 
             await macUeRunner.MakeDirectory(macResultDir);
@@ -131,13 +131,12 @@ public class MacBuilder(
     public override async Task PrepareRepository(string baseRepositoryPath, UEVersion engineVersion)
     {
         _isReady = false;
-        
+
         RepositoryPath =
             $"/tmp/{_pluginConfig.PluginName}/{DateTime.Now:yyyyMMdd_HHmmss}/{engineVersion.ToVersionString()}";
 
         try
         {
-            
             // Check if the remote directory exists and create it if needed
             var dirCheckResult = await macUeRunner.DirectoryExists(RepositoryPath);
             if (!dirCheckResult)
@@ -244,7 +243,7 @@ public class MacBuilder(
 
         return true;
     }
-    
+
     /// <summary>
     /// Tests the plugin asynchronously for Mac.
     /// </summary>
@@ -257,7 +256,7 @@ public class MacBuilder(
         var testCommandArgs =
             UECommandsHelper.GetAutomationTestCommandArgs(ProjectFilePath, _pluginConfig.PluginName,
                 macResultDir, EditorPlatform.Mac);
-        
+
         logger.LogInformation("Executing test script...");
 
         await using var writer = new StreamWriter(Path.Combine(TestResultDir, "AutomationTest.log"));
@@ -271,7 +270,7 @@ public class MacBuilder(
         }
 
         logger.LogInformation("Test finished");
-        
+
         logger.LogInformation(
             $"Downloading test results from {macResultDir} to {TestResultDir}");
 
@@ -303,8 +302,8 @@ public class MacBuilder(
 
         var buildPluginArgs = UECommandsHelper.GetBuildPluginArgs(RepositoryPath, _pluginConfig.PluginName,
             macPackagePath, MyPlatform(), MyEditorPlatform);
-        
-        
+
+
         logger.LogInformation("Executing package script...");
 
         var command = $"\"{RunUatBatPath}\" {buildPluginArgs}";
@@ -335,7 +334,7 @@ public class MacBuilder(
         }
 
         await CopyPackageToDestination(engineVersion, macPackagePath);
-            
+
         return statusOfPackage;
     }
 
@@ -344,7 +343,7 @@ public class MacBuilder(
         try
         {
             var pluginDestinationPath = GetEngineTargetPluginDirectory(engineVersion);
-        
+
             // Check if the packaged plugin exists in the local PackageDir
             var localPackagedPluginDir = $"{macPackagePath}/Plugin";
             if (!await macUeRunner.DirectoryExists(localPackagedPluginDir))
@@ -352,7 +351,7 @@ public class MacBuilder(
                 logger.LogWarning($"Packaged plugin directory not found locally: {localPackagedPluginDir}");
                 return;
             }
-            
+
             // Remove existing plugin if it exists
             if (await macUeRunner.DirectoryExists(pluginDestinationPath))
             {
@@ -364,8 +363,9 @@ public class MacBuilder(
 
             // Copy the packaged plugin from local PackageDir to destination
             await macUeRunner.CopyDirectory(localPackagedPluginDir, pluginDestinationPath);
-            
-            logger.LogInformation($"Successfully copied packaged plugin from {localPackagedPluginDir} to {pluginDestinationPath}");
+
+            logger.LogInformation(
+                $"Successfully copied packaged plugin from {localPackagedPluginDir} to {pluginDestinationPath}");
         }
         catch (Exception ex)
         {
@@ -378,20 +378,7 @@ public class MacBuilder(
     private string GetEngineTargetPluginDirectory(UEVersion engineVersion)
     {
         // Get version-specific destination path or fall back to default
-        var destinationPath = string.Empty;
-
-        if (_macConfig.CopyPackageDestinationPathsWithVersion.TryGetValue(engineVersion, out var versionSpecificPath))
-        {
-            destinationPath = versionSpecificPath;
-            logger.LogInformation($"Using version-specific destination path for UE {engineVersion}: {destinationPath}");
-        }
-
-        if (string.IsNullOrWhiteSpace(destinationPath))
-        {
-            logger.LogWarning("No destination path configured for plugin copy, skipping copy operation");
-            return string.Empty;
-        }
-
-        return $"{destinationPath}/{_pluginConfig.PluginName}";
+        return
+            $"{_macConfig.MacUnrealBasePath}/UE_{engineVersion.ToVersionString()}/Engine/Plugins/AyumaxSoft/{_pluginConfig.PluginName}";
     }
 }

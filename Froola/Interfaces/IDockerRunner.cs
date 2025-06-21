@@ -39,12 +39,4 @@ public interface IDockerRunner
     /// <returns>Path to the script inside Docker container, or null if not found.</returns>
     Task<string?> CopyScriptToDockerAndNormalizeAsync(string localScriptPath, string projectDir,
         string projectDirInDocker);
-
-    /// <summary>
-    /// Prepares custom plugins for Docker by copying them to a staging directory.
-    /// </summary>
-    /// <param name="sourcePath">The path to the directory containing plugins on the host machine.</param>
-    /// <param name="projectDir">The project directory on the host that's mounted to Docker.</param>
-    /// <returns>Path to the staged plugins directory, or null if operation failed.</returns>
-    Task<string?> PreparePluginsForDockerAsync(string sourcePath, string projectDir);
 }
