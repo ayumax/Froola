@@ -1,6 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Cysharp.Diagnostics;
 using Froola.Configs;
 using Froola.Interfaces;
 using Microsoft.Extensions.Options;
@@ -15,19 +15,12 @@ public class WindowsUnrealEngineRunner(
     IOptions<WindowsConfig> windowOptions,
     IProcessRunner processRunner) : IUnrealEngineRunner
 {
-    private readonly IProcessRunner processRunner = processRunner;
+    private readonly IProcessRunner _processRunner = processRunner;
     private readonly string _unrealBasePath = windowOptions.Value.WindowsUnrealBasePath;
 
-    /// <summary>
-    /// Builds a plugin using the Unreal Engine AutomationTool.
-    /// </summary>
-    /// <param name="pluginPath">Path to the .uplugin file.</param>
-    /// <param name="outputPath">Output directory for the built plugin.</param>
-    /// <param name="engineVersion">Engine version to use.</param>
-    /// <param name="targetPlatforms">Comma-separated list of target platforms.</param>
-    /// <param name="logFilePath">Optional path to a log file.</param>
+    /// <inheritdoc cref="IUnrealEngineRunner" />
     public async Task BuildPlugin(string pluginPath, string outputPath, int engineVersion, string targetPlatforms,
-        string logFilePath = "")
+        string logFilePath = "", Dictionary<string, string>? environmentVariables = null)
     {
         var runFile = Path.Combine(_unrealBasePath, $"UE_5.{engineVersion}", "Engine", "Binaries", "DotNET",
             "AutomationTool", "AutomationTool.exe");
@@ -46,7 +39,7 @@ public class WindowsUnrealEngineRunner(
                 writer = new StreamWriter(logFilePath);
             }
 
-            await foreach (var item in processRunner.RunAsync(runFile, args, workDirectory))
+            await foreach (var item in _processRunner.RunAsync(runFile, args, workDirectory, environmentVariables))
             {
                 logger.LogInformation(item);
             }
@@ -60,15 +53,9 @@ public class WindowsUnrealEngineRunner(
         }
     }
 
-    /// <summary>
-    /// Runs the Unreal Editor with the specified command line arguments.
-    /// </summary>
-    /// <param name="editorPath">Path to the Unreal Editor executable.</param>
-    /// <param name="arguments">Command line arguments for the editor.</param>
-    /// <param name="workingDirectory">Working directory for the editor process.</param>
-    /// <param name="logFilePath">Optional path to a log file.</param>
+    /// <inheritdoc cref="IUnrealEngineRunner" />
     public async Task RunUnrealEditor(string editorPath, string arguments, string workingDirectory,
-        string logFilePath = "")
+        string logFilePath = "", Dictionary<string, string>? environmentVariables = null)
     {
         logger.LogInformation($"Running UnrealEditor command: {editorPath} {arguments}");
 
@@ -81,7 +68,8 @@ public class WindowsUnrealEngineRunner(
                 writer = new StreamWriter(logFilePath);
             }
 
-            await foreach (var line in processRunner.RunAsync(editorPath, arguments, workingDirectory))
+            await foreach (var line in _processRunner.RunAsync(editorPath, arguments, workingDirectory,
+                               environmentVariables))
             {
                 logger.LogInformation(line);
 
@@ -100,15 +88,9 @@ public class WindowsUnrealEngineRunner(
         }
     }
 
-    /// <summary>
-    /// Runs a build script with the specified command line arguments.
-    /// </summary>
-    /// <param name="buildScriptPath">Path to the build script executable.</param>
-    /// <param name="arguments">Command line arguments for the script.</param>
-    /// <param name="workingDirectory">Working directory for the script process.</param>
-    /// <param name="logFilePath">Optional path to a log file.</param>
+    /// <inheritdoc cref="IUnrealEngineRunner" />
     public async Task RunBuildScript(string buildScriptPath, string arguments, string workingDirectory,
-        string logFilePath = "")
+        string logFilePath = "", Dictionary<string, string>? environmentVariables = null)
     {
         logger.LogInformation($"Running build script: {buildScriptPath} {arguments}");
 
@@ -121,7 +103,8 @@ public class WindowsUnrealEngineRunner(
                 writer = new StreamWriter(logFilePath);
             }
 
-            await foreach (var line in processRunner.RunAsync(buildScriptPath, arguments, workingDirectory))
+            await foreach (var line in _processRunner.RunAsync(buildScriptPath, arguments, workingDirectory,
+                               environmentVariables))
             {
                 logger.LogInformation(line);
 
