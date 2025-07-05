@@ -83,7 +83,7 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
     ///     Environment variable map
     /// </summary>
     [JsonIgnore]
-    public Dictionary<string, string> EnvironmentVariableMap { get; private set; }
+    public Dictionary<string, string> EnvironmentVariableMap { get; private set; } = new();
 
     public PluginConfig Build()
     {
