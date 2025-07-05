@@ -32,7 +32,7 @@ public class PluginCommand(
 
     private IFroolaLogger<PluginCommand> _logger = null!;
 
-    public IContainerBuilder ContainerBuilder { get; set; } = new PluginContainerBuilder();
+    public IContainerBuilder ContainerBuilder { get; init; } = new PluginContainerBuilder();
 
     /// <summary>
     ///     Runs the plugin build, test, and packaging process.
@@ -41,7 +41,7 @@ public class PluginCommand(
     /// <param name="projectName">-p,Name of the project</param>
     /// <param name="gitRepositoryUrl">-u,URL of the git repository</param>
     /// <param name="gitBranch">-b,Branch of the git repository</param>
-    /// <param name="gitBranches">g,Branches of the git repository(format version:branch)</param>
+    /// <param name="gitBranches">g,Branches of the git repository (format version:branch)</param>
     /// <param name="localRepositoryPath">-l,Path to the local repository</param>
     /// <param name="editorPlatforms">-e,Editor platforms</param>
     /// <param name="engineVersions">-v,Engine versions</param>
@@ -51,7 +51,7 @@ public class PluginCommand(
     /// <param name="packagePlatforms">-g,Game platforms</param>
     /// <param name="keepBinaryDirectory">d,Exclude the binary directory.</param>
     /// <param name="isZipped">z,Create a zip archive of the release directory</param>
-    /// <param name="copyPackageAfterBuild">r,Copy packaged plugin to configured destination paths</param>
+    /// <param name="copyPackageAfterBuild">r,Copy packaged plugin to configure destination paths</param>
     /// <param name="environmentVariables">i,Environment variables</param>
     /// <param name="cancellationToken">token for cancellation</param>
     [Command("plugin")]
