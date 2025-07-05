@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Froola.Interfaces;
@@ -15,9 +16,10 @@ public interface IUnrealEngineRunner
     /// <param name="engineVersion">Unreal Engine version number.</param>
     /// <param name="targetPlatforms">Target platforms to build for (comma separated).</param>
     /// <param name="logFilePath">Optional path to save the build log file.</param>
+    /// <param name="environmentVariables">Environment variables</param>
     /// <returns>Async task.</returns>
     Task BuildPlugin(string pluginPath, string outputPath, int engineVersion, string targetPlatforms,
-        string logFilePath = "");
+        string logFilePath = "", Dictionary<string, string>? environmentVariables = null);
 
     /// <summary>
     /// Runs Unreal Editor with specified command line arguments.
@@ -26,8 +28,10 @@ public interface IUnrealEngineRunner
     /// <param name="arguments">Command line arguments.</param>
     /// <param name="workingDirectory">Working directory.</param>
     /// <param name="logFilePath">Optional path to save the editor log file.</param>
+    /// <param name="environmentVariables">Environment variables</param>
     /// <returns>Async task.</returns>
-    Task RunUnrealEditor(string editorPath, string arguments, string workingDirectory, string logFilePath = "");
+    Task RunUnrealEditor(string editorPath, string arguments, string workingDirectory, string logFilePath = "",
+        Dictionary<string, string>? environmentVariables = null);
 
     /// <summary>
     /// Runs a build script with specified command line arguments.
@@ -36,6 +40,8 @@ public interface IUnrealEngineRunner
     /// <param name="arguments">Command line arguments.</param>
     /// <param name="workingDirectory">Working directory.</param>
     /// <param name="logFilePath">Optional path to save the script log file.</param>
+    /// <param name="environmentVariables">Environment variables</param>
     /// <returns>Async task.</returns>
-    Task RunBuildScript(string buildScriptPath, string arguments, string workingDirectory, string logFilePath = "");
+    Task RunBuildScript(string buildScriptPath, string arguments, string workingDirectory, string logFilePath = "",
+        Dictionary<string, string>? environmentVariables = null);
 }

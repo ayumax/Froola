@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
+using System.Text.Json.Serialization;
 using Froola.Configs.Attributes;
 using Froola.Configs.Collections;
 using Froola.Interfaces;
@@ -69,6 +72,19 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
     /// </summary>
     public bool CopyPackageAfterBuild { get; set; } = false;
 
+
+    /// <summary>
+    ///     Environment variables
+    /// </summary>
+    /// <remarks>Format of VALUENAME=value</remarks>
+    public OptionList<string> EnvironmentVariables { get; set; } = [];
+
+    /// <summary>
+    ///     Environment variable map
+    /// </summary>
+    [JsonIgnore]
+    public Dictionary<string, string> EnvironmentVariableMap { get; private set; }
+
     public PluginConfig Build()
     {
         var resultPath = string.IsNullOrEmpty(ResultPath)
@@ -105,6 +121,17 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
         if (PackagePlatforms.Count == 0)
         {
             throw new ArgumentException("PackagePlatforms must have at least one value");
+        }
+
+        EnvironmentVariableMap = new Dictionary<string, string>();
+        foreach (var keyValuePair in EnvironmentVariables.Select(variablePair => variablePair.Split('=')))
+        {
+            if (keyValuePair.Length != 2)
+            {
+                throw new ArgumentException("EnvironmentVariables must be in the format of VALUENAME=value");
+            }
+
+            EnvironmentVariableMap.Add(keyValuePair[0], keyValuePair[1]);
         }
 
         return this;

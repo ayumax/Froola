@@ -215,7 +215,7 @@ public class LinuxBuilder(
             await using var writer = new StreamWriter(Path.Combine(BuildResultDir, "Build.log"));
 
             await foreach (var logLine in dockerRunner.RunContainer(dockerImage, command, RepositoryPath,
-                               volumeMappings, new Dictionary<string, string>()))
+                               volumeMappings, _pluginConfig.EnvironmentVariableMap))
             {
                 logger.LogInformation($"{logLine}");
                 await writer.WriteLineAsync(logLine);
@@ -267,7 +267,7 @@ public class LinuxBuilder(
             await using var writer = new StreamWriter(Path.Combine(TestResultDir, "AutomationTest.log"));
 
             await foreach (var logLine in dockerRunner.RunContainer(dockerImage, command, RepositoryPath,
-                               volumeMappings, new Dictionary<string, string>()))
+                               volumeMappings, _pluginConfig.EnvironmentVariableMap))
             {
                 logger.LogInformation($"{logLine}");
                 await writer.WriteLineAsync(logLine);
@@ -330,7 +330,7 @@ public class LinuxBuilder(
             await using var writer = new StreamWriter(Path.Combine(PackageDir, "BuildPlugin.log"));
 
             await foreach (var logLine in dockerRunner.RunContainer(dockerImage, command, RepositoryPath,
-                               volumeMappings, new Dictionary<string, string>()))
+                               volumeMappings, _pluginConfig.EnvironmentVariableMap))
             {
                 logger.LogInformation($"{logLine}");
                 await writer.WriteLineAsync(logLine);

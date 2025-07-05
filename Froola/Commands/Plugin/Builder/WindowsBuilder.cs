@@ -145,7 +145,8 @@ public class WindowsBuilder(
             var logFilePath = Path.Combine(BuildResultDir, "Build.log");
 
             logger.LogInformation("Starting build process...");
-            await unrealRunner.RunBuildScript(BuildBatPath, BuildProjectArgs, workingDirectory, logFilePath);
+            await unrealRunner.RunBuildScript(BuildBatPath, BuildProjectArgs, workingDirectory, logFilePath,
+                _pluginConfig.EnvironmentVariableMap);
             logger.LogInformation("Build completed successfully.");
         }
         catch (ProcessErrorException ex)
@@ -182,7 +183,8 @@ public class WindowsBuilder(
 
             var logFilePath = Path.Combine(TestResultDir, "AutomationTest.log");
 
-            await unrealRunner.RunUnrealEditor(EditorPath, testCommandArgs, workingDirectory, logFilePath);
+            await unrealRunner.RunUnrealEditor(EditorPath, testCommandArgs, workingDirectory, logFilePath,
+                _pluginConfig.EnvironmentVariableMap);
         }
         catch (ProcessErrorException ex)
         {
@@ -216,7 +218,8 @@ public class WindowsBuilder(
 
             var logFilePath = Path.Combine(outputDir, "BuildPlugin.log");
 
-            await unrealRunner.RunBuildScript(RunUatBatPath, buildPluginArgs, workingDirectory, logFilePath);
+            await unrealRunner.RunBuildScript(RunUatBatPath, buildPluginArgs, workingDirectory, logFilePath,
+                _pluginConfig.EnvironmentVariableMap);
             logger.LogInformation("Plugin packaging completed successfully.");
         }
         catch (ProcessErrorException ex)
