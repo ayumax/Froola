@@ -233,7 +233,8 @@ public class MacBuilder(
 
         await using var writer = new StreamWriter(Path.Combine(BuildResultDir, "Build.log"));
 
-        await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command))
+        await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command,
+                           _pluginConfig.EnvironmentVariableMap))
         {
             logger.LogInformation(logLine);
             await writer.WriteLineAsync(logLine);
@@ -263,7 +264,8 @@ public class MacBuilder(
 
         var command = $"\"{EditorPath}\" {testCommandArgs}";
 
-        await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command))
+        await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command,
+                           _pluginConfig.EnvironmentVariableMap))
         {
             logger.LogInformation(logLine);
             await writer.WriteLineAsync(logLine);
@@ -310,7 +312,8 @@ public class MacBuilder(
 
         await using var writer = new StreamWriter(Path.Combine(PackageDir, "BuildPlugin.log"));
 
-        await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command))
+        await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command,
+                           _pluginConfig.EnvironmentVariableMap))
         {
             logger.LogInformation(logLine);
             await writer.WriteLineAsync(logLine);
