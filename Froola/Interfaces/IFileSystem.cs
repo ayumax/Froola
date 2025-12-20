@@ -91,4 +91,9 @@ public interface IFileSystem
     ///     Removes the ReadOnly attribute from all files and directories under the specified directory.
     /// </summary>
     void RemoveReadOnlyAttribute(string directoryPath);
+
+    /// <summary>
+    ///     Zips the specified directory to the specified destination file.
+    /// </summary>
+    void ZipDirectory(string sourceDir, string destZipFile);
 }

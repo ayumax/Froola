@@ -16,6 +16,13 @@ public interface IBuilder
     Task<BuildResult> Run(UEVersion engineVersion);
 
     /// <summary>
+    /// Runs a project package build for the specified engine version.
+    /// </summary>
+    /// <param name="engineVersion">Engine version</param>
+    /// <returns>Build result.</returns>
+    Task<BuildResult> RunPackage(UEVersion engineVersion);
+
+    /// <summary>
     /// Prepares the repository for testing.
     /// </summary>
     /// <param name="baseRepositoryPath">Temporary directory path.</param>

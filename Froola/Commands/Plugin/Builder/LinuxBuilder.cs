@@ -99,6 +99,14 @@ public class LinuxBuilder(
         }
     }
 
+    /// <summary>
+    /// Not implemented for plugin builder.
+    /// </summary>
+    public Task<BuildResult> RunPackage(UEVersion engineVersion)
+    {
+        throw new NotImplementedException("RunPackage is not used for plugin building. Use Run instead.");
+    }
+
     /// <inheritdoc cref="IBuilder" />
     public override Task PrepareRepository(string baseRepositoryPath, UEVersion engineVersion)
     {
