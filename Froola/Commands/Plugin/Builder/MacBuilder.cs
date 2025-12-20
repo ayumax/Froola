@@ -127,6 +127,40 @@ public class MacBuilder(
         }
     }
 
+    /// <inheritdoc />
+    public async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
+    {
+        var outputDir = GameDir;
+        await macUeRunner.MakeDirectory(outputDir);
+
+        try
+        {
+            var targetPlatform = GamePlatform.Mac;
+            var buildCookRunArgs = UECommandsHelper.GetBuildCookRunArgs(ProjectFilePath, outputDir, targetPlatform, EditorPlatform.Mac);
+            
+            var logFilePath = Path.Combine(PackageDir, "BuildGamePackage.log");
+            
+            var command = $"\"{RunUatBatPath}\" {buildCookRunArgs}";
+
+            await using var writer = new StreamWriter(logFilePath);
+
+            await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command,
+                               _pluginConfig.EnvironmentVariableMap))
+            {
+                logger.LogInformation(logLine);
+                await writer.WriteLineAsync(logLine);
+            }
+
+            logger.LogInformation("Game packaging completed successfully.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Game packaging failed: {ex.Message}");
+            return false;
+        }
+    }
+
     /// <inheritdoc cref="IBuilder" />
     public override async Task PrepareRepository(string baseRepositoryPath, UEVersion engineVersion)
     {

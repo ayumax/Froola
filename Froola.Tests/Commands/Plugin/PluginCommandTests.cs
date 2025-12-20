@@ -188,6 +188,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
                 resultPath,
                 runTest,
                 runPackage,
+                null,
                 packagePlatforms
             );
             // Assert values after run
@@ -205,6 +206,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
                 resultPath,
                 runTest,
                 runPackage,
+                null,
                 packagePlatforms
             ));
             // Assert values even if exception
@@ -279,6 +281,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             pluginConfig.ResultPath,    
             pluginConfig.RunTest,
             pluginConfig.RunPackage,
+            null,
             ["Win64"],
             pluginConfig.KeepBinaryDirectory,
             pluginConfig.IsZipped,
@@ -348,6 +351,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             pluginConfig.ResultPath,
             pluginConfig.RunTest,
             pluginConfig.RunPackage,
+            null,
             ["Win64"]
         ));
     }
@@ -414,6 +418,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             pluginConfig.ResultPath,
             pluginConfig.RunTest,
             pluginConfig.RunPackage,
+            null,
             ["Win64"]
         ));
     }

@@ -51,6 +51,11 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
     ///     Whether to run package
     /// </summary>
     public bool RunPackage { get; set; } = false;
+    
+    /// <summary>
+    ///     Whether to run game package
+    /// </summary>
+    public bool RunGamePackage { get; set; } = false;
 
     /// <summary>
     ///     List of game platforms for packaging

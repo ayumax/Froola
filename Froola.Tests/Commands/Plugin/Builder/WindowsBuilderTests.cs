@@ -60,7 +60,7 @@ public class WindowsBuilderTests
         await builder.PrepareRepository(baseRepo, version);
 
         builder.InitDirectory(version);
-        _mockFileSystem.Verify(f => f.CreateDirectory(It.IsAny<string>()), Times.Exactly(3));
+        _mockFileSystem.Verify(f => f.CreateDirectory(It.IsAny<string>()), Times.Exactly(4));
     }
 
     [Fact]

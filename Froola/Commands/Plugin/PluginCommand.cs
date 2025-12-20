@@ -29,6 +29,7 @@ public class PluginCommand(
     private GitConfig _gitConfig = null!;
     private IGitClient _gitClient = null!;
     private IFileSystem _fileSystem = null!;
+    private Dictionary<UEVersion, string> _baseRepoPathMap = new();
 
     private IFroolaLogger<PluginCommand> _logger = null!;
 
@@ -48,6 +49,7 @@ public class PluginCommand(
     /// <param name="resultPath">-o,Path to save results</param>
     /// <param name="runTest">-t,Run tests</param>
     /// <param name="runPackage">-c,Run packaging</param>
+    /// <param name="runGamePackage">-gp,Run game packaging</param>
     /// <param name="packagePlatforms">-g,Game platforms</param>
     /// <param name="keepBinaryDirectory">-d,Exclude the binary directory.</param>
     /// <param name="isZipped">-z,Create a zip archive of the release directory</param>
@@ -68,6 +70,7 @@ public class PluginCommand(
         string? resultPath = null,
         bool? runTest = null,
         bool? runPackage = null,
+        bool? runGamePackage = null,
         [EnumArray(typeof(GamePlatform))] string[]? packagePlatforms = null,
         bool? keepBinaryDirectory = null,
         bool? isZipped = null,
@@ -89,6 +92,7 @@ public class PluginCommand(
             ResultPath = resultPath ?? configOptions.Value.ResultPath,
             RunTest = runTest ?? configOptions.Value.RunTest,
             RunPackage = runPackage ?? configOptions.Value.RunPackage,
+            RunGamePackage = runGamePackage ?? configOptions.Value.RunGamePackage,
             PackagePlatforms = packagePlatforms is null
                 ? configOptions.Value.PackagePlatforms
                 : new OptionList<GamePlatform>(
@@ -141,6 +145,7 @@ public class PluginCommand(
             }
 
             var baseRepoPath = await CloneGitRepository(engineVersion, repoPath);
+            _baseRepoPathMap[engineVersion] = baseRepoPath;
 
             var tasks = new List<Task<BuildResult>>();
             var builders = dependencyResolver.Resolve<IEnumerable<IBuilder>>().ToArray();
@@ -171,6 +176,27 @@ public class PluginCommand(
             buildResultsMap.Add(engineVersion, results);
 
             MergePackages(engineVersion);
+
+            if (_pluginConfig.RunGamePackage)
+            {
+                foreach (var editorPlatform in _pluginConfig.EditorPlatforms)
+                {
+                    var builder = editorPlatform switch
+                    {
+                        EditorPlatform.Windows => builders.FirstOrDefault(x => x is IWindowsBuilder),
+                        EditorPlatform.Mac => builders.FirstOrDefault(x => x is IMacBuilder),
+                        EditorPlatform.Linux => builders.FirstOrDefault(x => x is ILinuxBuilder),
+                        _ => throw new ArgumentException($"Unknown OS: {editorPlatform}")
+                    };
+
+                    if (builder is null) continue;
+
+                    if (await builder.BuildGamePackageAsync(engineVersion))
+                    {
+                        ZipGamePackage(builder, editorPlatform, engineVersion);
+                    }
+                }
+            }
 
             foreach (var builder in builders)
             {
@@ -402,6 +428,37 @@ public class PluginCommand(
         _logger.LogInformation($"Zip file created: {zipFilePath}");
 
         return true;
+    }
+
+    private void ZipGamePackage(IBuilder builder, EditorPlatform editorPlatform, UEVersion engineVersion)
+    {
+        var gamePackageDir = builder.GetGameDirectory();
+        
+        if (!_fileSystem.DirectoryExists(gamePackageDir))
+        {
+            _logger.LogWarning($"Game package directory not found: {gamePackageDir}");
+            return;
+        }
+
+        var pluginVersion = GetPluginVersion(Path.Combine(_baseRepoPathMap[engineVersion], "Plugins", _pluginConfig.PluginName));
+        var platform = editorPlatform switch
+        {
+            EditorPlatform.Windows => "Win64",
+            EditorPlatform.Mac => "Mac",
+            EditorPlatform.Linux => "Linux",
+            _ => editorPlatform.ToString()
+        };
+
+        var zipFileName = $"{_pluginConfig.ProjectName}_{pluginVersion}_{engineVersion.ToFullVersionString()}_{platform}.zip";
+        var zipFilePath = Path.Combine(_pluginConfig.ResultPath, "release", zipFileName);
+
+        if (_fileSystem.FileExists(zipFilePath))
+        {
+            _fileSystem.DeleteFile(zipFilePath);
+        }
+
+        _logger.LogInformation($"Zipping game package to {zipFilePath}");
+        ZipFile.CreateFromDirectory(gamePackageDir, zipFilePath);
     }
 
     private string GetPluginVersion(string sourceDirectory)

@@ -169,6 +169,19 @@ public static class UECommandsHelper
     }
 
     /// <summary>
+    /// Gets BuildCookRun arguments for RunUAT.
+    /// </summary>
+    /// <param name="projectFilePath">Path to the .uproject file.</param>
+    /// <param name="outputDir">Output directory for the packaged game.</param>
+    /// <param name="targetPlatform">Target game platform.</param>
+    /// <param name="editorPlatform">Target editor platform.</param>
+    /// <returns>Arguments string for BuildCookRun.</returns>
+    public static string GetBuildCookRunArgs(string projectFilePath, string outputDir, GamePlatform targetPlatform, EditorPlatform editorPlatform)
+    {
+        return $"BuildCookRun -project={projectFilePath} -archive -archivedirectory={outputDir} -platform={targetPlatform} -clientconfig=Development -nop4 -build -cook -stage -pak -allmaps -nocompileeditor -unattended -utf8";
+    }
+
+    /// <summary>
     /// Gets the path to the GenerateProjectFiles script.
     /// </summary>
     /// <param name="windowsConfig">Configuration for Windows.</param>

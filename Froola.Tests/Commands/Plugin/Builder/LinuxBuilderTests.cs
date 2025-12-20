@@ -73,7 +73,7 @@ public class LinuxBuilderTests
         _mockFileSystem.Setup(f => f.DirectoryExists(It.IsAny<string>())).Returns(false);
         await builder.PrepareRepository("/src/repo", UEVersion.UE_5_3);
         builder.InitDirectory(UEVersion.UE_5_3);
-        _mockFileSystem.Verify(f => f.CreateDirectory(It.IsAny<string>()), Times.Exactly(4));
+        _mockFileSystem.Verify(f => f.CreateDirectory(It.IsAny<string>()), Times.Exactly(5));
     }
 
     [Fact]

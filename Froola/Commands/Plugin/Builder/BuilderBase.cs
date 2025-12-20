@@ -23,6 +23,7 @@ public abstract class BuilderBase(
     protected string BuildResultDir = null!;
     protected string TestResultDir = null!;
     protected string PackageDir = null!;
+    protected string GameDir = null!;
     protected string ProjectFilePath = null!;
     protected string UeDirectoryPath = null!;
     protected string EditorPath = null!;
@@ -61,6 +62,13 @@ public abstract class BuilderBase(
         {
             fileSystem.CreateDirectory(PackageDir);
         }
+        
+        GameDir = Path.Combine(pluginConfig.ResultPath, "game",
+            $"{MyEditorPlatform}_{engineVersion.ToFullVersionString()}");
+        if (!fileSystem.DirectoryExists(GameDir))
+        {
+            fileSystem.CreateDirectory(GameDir);
+        }
 
         ProjectFilePath =
             UECommandsHelper.GetUprojectPath(RepositoryPath, pluginConfig.ProjectName, MyEditorPlatform);
@@ -81,6 +89,7 @@ public abstract class BuilderBase(
         logger.LogInformation($"Build result directory: {BuildResultDir}");
         logger.LogInformation($"Test result directory: {TestResultDir}");
         logger.LogInformation($"Package directory: {PackageDir}");
+        logger.LogInformation($"Game directory: {GameDir}");
         logger.LogInformation($"Project file path: {ProjectFilePath}");
         logger.LogInformation($"Unreal Engine directory: {UeDirectoryPath}");
         logger.LogInformation($"Unreal Editor path: {EditorPath}");
@@ -111,10 +120,19 @@ public abstract class BuilderBase(
     /// <summary>
     /// Checks the package build result for the specified engine version.
     /// </summary>
+    /// <summary>
+    /// Checks the package build result for the specified engine version.
+    /// </summary>
     protected BuildStatus CheckPackageBuildResult(UEVersion engineVersion)
     {
         return testResultsEvaluator.EvaluatePackageBuildResults(
             Path.Combine(PackageDir, "Plugin", $"{pluginConfig.PluginName}.uplugin"), MyEditorPlatform,
             engineVersion);
+    }
+
+    /// <inheritdoc />
+    public string GetGameDirectory()
+    {
+        return GameDir;
     }
 }

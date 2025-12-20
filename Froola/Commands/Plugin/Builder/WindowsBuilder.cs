@@ -282,6 +282,41 @@ public class WindowsBuilder(
             @"Engine\Plugins\Marketplace", _pluginConfig.PluginName);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
+    {
+        var outputDir = GameDir;
+        _fileSystem.CreateDirectory(outputDir);
+
+        try
+        {
+            var targetPlatform = GamePlatform.Win64;
+            var buildCookRunArgs = UECommandsHelper.GetBuildCookRunArgs(ProjectFilePath, outputDir, targetPlatform, EditorPlatform.Windows);
+            
+            var logFilePath = Path.Combine(outputDir, "BuildGamePackage.log");
+            
+            await unrealRunner.RunBuildScript(RunUatBatPath, buildCookRunArgs, Path.GetDirectoryName(ProjectFilePath)!, logFilePath, _pluginConfig.EnvironmentVariableMap);
+            
+            logger.LogInformation("Game packaging completed successfully.");
+            return true;
+        }
+        catch (ProcessErrorException ex)
+        {
+            if (ex.ExitCode != 0)
+            {
+                logger.LogError($"Game packaging failed: {ex.Message}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"An unexpected error occurred during game packaging: {ex.Message}");
+            return false;
+        }
+
+        return true;
+    }
+
     /// <summary>
     ///     Gets the game platforms for the specified input parameters.
     /// </summary>
