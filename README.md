@@ -13,6 +13,7 @@ Froola streamlines the process of building and testing Unreal Engine code plugin
 - Supports Unreal Engine 5.0 and later (tested on 5.3+)
 - Easy command-line execution
 - Designed for CI/CD and cross-platform development environments
+- Support for both Plugin and Project packaging
 - Developed with .NET 9.0 and C# 12
 
 ## Supported Platforms
@@ -197,6 +198,7 @@ Froola.exe init-config -o "path to save config template(*.json)"
 | Plugin.PackagePlatforms              | array      | Packaging platforms to use                     | ["Win64","Mac","Linux","Android","IOS"]     |
 | Plugin.IsZipped                      | bool       | Whether to zip the plugin output                | true                                          |
 | Plugin.KeepBinaryDirectory           | bool       | Whether to keep the Binary directory after the operation | false                                         |
+| Package.ZipPackageName               | string     | Name of the zip package                        | "MyProject_Release"                          |
 | Windows.WindowsUnrealBasePath        | string     | Windows Unreal Engine installation base path   | "C:\\Program Files\\Epic Games"              |
 | Linux.DockerCommand                  | string     | Docker command ("docker" or "podman")           | "docker"                                     |
 | Linux.DockerImage                    | string     | Docker image (%v will be replaced with UE version)      | "ghcr.io/epicgames/unreal-engine:dev-slim-%v" |
@@ -223,6 +225,11 @@ Froola.exe plugin -n <plugin name> -p <project name> -u <git repository url> -b 
 Froola.exe plugin -n ObjectDeliverer -p ObjectDelivererTest -u git@github.com:ayumax/ObjectDeliverer.git -b master -e Windows,Mac -v 5.5 -t -c -g Win64,Mac,Android,IOS
 ```
 
+- Example 2: Package the Unreal Engine project for Windows and Mac (UE 5.5)
+```sh
+Froola.exe package -p MyProjectName -u git@github.com:yourname/yourproject.git -b main -e Windows,Mac -v 5.5 -g Win64,Mac
+```
+
 This command will execute the build and packaging process based on the settings in `appsettings.json`.
 
 ### plugin Command Main Arguments
@@ -247,6 +254,22 @@ This command will execute the build and packaging process based on the settings 
 
 ※Non-required items can also be set in `appsettings.json`. Command-line arguments take priority over `appsettings.json` settings.
 ※Specify platforms and versions as comma-separated arrays (e.g., Windows,Mac,Linux).
+
+### package Command Main Arguments
+
+| Option Name                  | Type         | Description                                             |
+|------------------------------|------------|--------------------------------------------------|
+| -p, --project-name           | string     | Project name (required)                           |
+| -u, --git-repository-url     | string     | Git repository URL                         |
+| -b, --git-branch             | string     | Branch name                               |
+| -g, --git-branches           | string[]?  | UE version-specific Git branches                 |
+| -l, --local-repository-path  | string     | Local repository path                               |
+| -e, --editor-platforms       | string[]?  | Editor platforms (e.g., Windows, Mac, Linux)|
+| -v, --engine-versions        | string[]?  | Unreal Engine versions (e.g., 5.3, 5.4, 5.5)     |
+| -o, --result-path            | string?    | Result output directory                                       |
+| -g, --package-platforms      | string[]?  | Packaging platforms (Win64, Mac, Linux, Android, IOS)|
+| --zip-package-name           | string     | Name of the zip package                         |
+| -z, --is-zipped              | bool?      | Whether to zip the output                       |
 
 ### plugin Command Execution Flow
 1. Clone the specified Git repository to the Windows platform.(if `--local-repository-path` is not set)

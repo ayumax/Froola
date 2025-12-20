@@ -1,4 +1,5 @@
 using System.IO;
+using System.IO.Compression;
 using System.Threading.Tasks;
 using Froola.Interfaces;
 
@@ -152,5 +153,13 @@ public class SystemFileSystem : IFileSystem
         {
             File.SetAttributes(directoryPath, rootAttributes & ~FileAttributes.ReadOnly);
         }
+    }
+
+    /// <summary>
+    ///     Zips the specified directory to the specified destination file.
+    /// </summary>
+    public void ZipDirectory(string sourceDir, string destZipFile)
+    {
+        ZipFile.CreateFromDirectory(sourceDir, destZipFile);
     }
 }

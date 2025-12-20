@@ -198,6 +198,30 @@ public static class UECommandsHelper
     }
 
     /// <summary>
+    /// Gets BuildCookRun arguments for RunUAT.
+    /// </summary>
+    /// <param name="projectFilePath">Full path to the project file.</param>
+    /// <param name="outputDir">Output directory for the packaged project.</param>
+    /// <param name="targetPlatforms">Comma-separated list of target platforms.</param>
+    /// <param name="editorPlatform">Target editor platform.</param>
+    /// <param name="configuration">Build configuration.</param>
+    /// <returns>Arguments string for BuildCookRun.</returns>
+    public static string GetBuildCookRunArgs(string projectFilePath, string outputDir,
+        IEnumerable<GamePlatform> targetPlatforms, EditorPlatform editorPlatform,
+        string configuration = "Development")
+    {
+        var platforms =
+            targetPlatforms.Aggregate(string.Empty, (current, platform) => current + (platform + "+"));
+
+        platforms = platforms.TrimEnd('+');
+
+        var archiveDir = CombinePath(editorPlatform, outputDir, "Project");
+
+        return
+            $"BuildCookRun -project={projectFilePath} -noP4 -clientconfig={configuration} -nocompileeditor -installed -ue4exe=UnrealEditor -utf8output -platform={platforms} -build -cook -stage -archive -archivedirectory={archiveDir}";
+    }
+
+    /// <summary>
     /// Combines multiple paths into a single path based on the target OS.
     /// </summary>
     private static string CombinePath(EditorPlatform os, params ReadOnlySpan<string> paths)
