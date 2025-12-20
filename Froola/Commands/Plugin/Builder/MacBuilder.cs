@@ -130,17 +130,18 @@ public class MacBuilder(
     /// <inheritdoc />
     public async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
     {
-        var outputDir = GameDir;
-        await macUeRunner.MakeDirectory(outputDir);
+        var remoteOutputDir = $"{RepositoryPath}/GamePackage";
+        await macUeRunner.MakeDirectory(remoteOutputDir);
 
         try
         {
             var targetPlatform = GamePlatform.Mac;
-            var buildCookRunArgs = UECommandsHelper.GetBuildCookRunArgs(ProjectFilePath, outputDir, targetPlatform, EditorPlatform.Mac);
+            var buildCookRunArgs = UECommandsHelper.GetBuildCookRunArgs(ProjectFilePath, remoteOutputDir, targetPlatform, EditorPlatform.Mac);
             
             var logFilePath = Path.Combine(PackageDir, "BuildGamePackage.log");
             
-            var command = $"\"{RunUatBatPath}\" {buildCookRunArgs}";
+            var runUatDir = Path.GetDirectoryName(RunUatBatPath)!.Replace("\\", "/");
+            var command = $"cd \"{runUatDir}\" && \"./{Path.GetFileName(RunUatBatPath)}\" {buildCookRunArgs}";
 
             await using var writer = new StreamWriter(logFilePath);
 
@@ -152,13 +153,25 @@ public class MacBuilder(
             }
 
             logger.LogInformation("Game packaging completed successfully.");
-            return true;
         }
         catch (Exception ex)
         {
             logger.LogError($"Game packaging failed: {ex.Message}");
             return false;
         }
+
+        var downloadSuccess = await macUeRunner.DownloadDirectory(remoteOutputDir, GameDir);
+        if (downloadSuccess)
+        {
+            logger.LogInformation($"Successfully downloaded game package to {GameDir}");
+        }
+        else
+        {
+            logger.LogError($"Failed to download game package from {remoteOutputDir}");
+            return false;
+        }
+
+        return true;
     }
 
     /// <inheritdoc cref="IBuilder" />
