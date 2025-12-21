@@ -130,18 +130,19 @@ public class MacBuilder(
     /// <inheritdoc />
     public async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
     {
-        var remoteOutputDir = $"{RepositoryPath}/GamePackage";
-        await macUeRunner.MakeDirectory(remoteOutputDir);
+        var remoteOutputDir = Path.Combine(RepositoryPath, "GamePackage").Replace("\\", "/");
+        if (!await macUeRunner.DirectoryExists(remoteOutputDir))
+        {
+            await macUeRunner.MakeDirectory(remoteOutputDir);
+        }
 
         try
         {
-            var targetPlatform = GamePlatform.Mac;
-            var buildCookRunArgs = UECommandsHelper.GetBuildCookRunArgs(ProjectFilePath, remoteOutputDir, targetPlatform, EditorPlatform.Mac);
+            var buildCookRunArgs = UECommandsHelper.GetBuildCookRunArgs(ProjectFilePath, remoteOutputDir, GamePlatform.Mac, EditorPlatform.Mac);
             
-            var logFilePath = Path.Combine(PackageDir, "BuildGamePackage.log");
+            var logFilePath = Path.Combine(GameDir, "BuildGamePackage.log");
             
-            var runUatDir = Path.GetDirectoryName(RunUatBatPath)!.Replace("\\", "/");
-            var command = $"cd \"{runUatDir}\" && \"./{Path.GetFileName(RunUatBatPath)}\" {buildCookRunArgs}";
+            var command = $"\"{RunUatBatPath}\" {buildCookRunArgs}";
 
             await using var writer = new StreamWriter(logFilePath);
 
