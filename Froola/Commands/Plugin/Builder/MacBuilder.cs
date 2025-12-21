@@ -107,6 +107,13 @@ public class MacBuilder(
                         : BuildStatus.Failed;
                 }
 
+                if (_pluginConfig.RunGamePackage)
+                {
+                    result.StatusOfGamePackage = await BuildGamePackageAsync(engineVersion)
+                        ? BuildStatus.Success
+                        : BuildStatus.Failed;
+                }
+
                 return result;
             }
             finally

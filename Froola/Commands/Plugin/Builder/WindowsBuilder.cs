@@ -88,6 +88,12 @@ public class WindowsBuilder(
             }
         }
 
+        if (_pluginConfig.RunGamePackage)
+        {
+            // Game Package
+            result.StatusOfGamePackage = await BuildGamePackageAsync(engineVersion) ? BuildStatus.Success : BuildStatus.Failed;
+        }
+
         return result;
     }
 
@@ -283,7 +289,7 @@ public class WindowsBuilder(
     }
 
     /// <inheritdoc />
-    public async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
+    public virtual async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
     {
         var outputDir = GameDir;
         _fileSystem.CreateDirectory(outputDir);

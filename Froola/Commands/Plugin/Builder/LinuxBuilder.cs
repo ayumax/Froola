@@ -90,6 +90,13 @@ public class LinuxBuilder(
                 }
             }
 
+            if (_pluginConfig.RunGamePackage)
+            {
+                result.StatusOfGamePackage = await BuildGamePackageAsync(engineVersion)
+                    ? BuildStatus.Success
+                    : BuildStatus.Failed;
+            }
+
             return result;
         }
         catch (Exception ex)

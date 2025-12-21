@@ -179,21 +179,21 @@ public class PluginCommand(
 
             if (_pluginConfig.RunGamePackage)
             {
-                foreach (var editorPlatform in _pluginConfig.EditorPlatforms)
+                foreach (var result in results)
                 {
-                    var builder = editorPlatform switch
+                    if (result.StatusOfGamePackage != BuildStatus.Success) continue;
+
+                    var builder = result.Os switch
                     {
                         EditorPlatform.Windows => builders.FirstOrDefault(x => x is IWindowsBuilder),
                         EditorPlatform.Mac => builders.FirstOrDefault(x => x is IMacBuilder),
                         EditorPlatform.Linux => builders.FirstOrDefault(x => x is ILinuxBuilder),
-                        _ => throw new ArgumentException($"Unknown OS: {editorPlatform}")
+                        _ => throw new ArgumentException($"Unknown OS: {result.Os}")
                     };
 
-                    if (builder is null) continue;
-
-                    if (await builder.BuildGamePackageAsync(engineVersion))
+                    if (builder is not null)
                     {
-                        ZipGamePackage(builder, editorPlatform, engineVersion);
+                        ZipGamePackage(builder, result.Os, engineVersion);
                     }
                 }
             }
