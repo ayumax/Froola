@@ -190,7 +190,7 @@ public static class UECommandsHelper
             extraArgs = " -architecture=arm64";
         }
         
-        return $"BuildCookRun -project={projectFilePath} -archive -archivedirectory={outputDir} -platform={platformStr}{extraArgs} -clientconfig=Development -nop4 -build -cook -stage -pak -allmaps -nocompileeditor -unattended -utf8";
+        return $"BuildCookRun -project={projectFilePath} -archive -archivedirectory={outputDir} -platform={platformStr}{extraArgs} -clientconfig=Shipping -nop4 -build -cook -stage -pak -allmaps -nocompileeditor -unattended -utf8";
     }
 
     /// <summary>
