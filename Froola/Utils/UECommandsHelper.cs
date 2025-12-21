@@ -178,7 +178,19 @@ public static class UECommandsHelper
     /// <returns>Arguments string for BuildCookRun.</returns>
     public static string GetBuildCookRunArgs(string projectFilePath, string outputDir, GamePlatform targetPlatform, EditorPlatform editorPlatform)
     {
-        return $"BuildCookRun -project={projectFilePath} -archive -archivedirectory={outputDir} -platform={targetPlatform} -clientconfig=Development -nop4 -build -cook -stage -pak -allmaps -nocompileeditor -unattended -utf8";
+        var platformStr = targetPlatform.ToString();
+        var extraArgs = string.Empty;
+
+        if (editorPlatform == EditorPlatform.Mac && targetPlatform == GamePlatform.Mac)
+        {
+            // For UE5.4+ on Apple Silicon Mac, we might need to specify architecture or use MacArm64
+            // Based on the error "Platform Mac is not a valid platform to build", 
+            // it's likely it expects MacArm64 or an explicit architecture flag.
+            // Let's try adding -architecture=arm64 which is often required for modern Mac builds in UAT.
+            extraArgs = " -architecture=arm64";
+        }
+        
+        return $"BuildCookRun -project={projectFilePath} -archive -archivedirectory={outputDir} -platform={platformStr}{extraArgs} -clientconfig=Development -nop4 -build -cook -stage -pak -allmaps -nocompileeditor -unattended -utf8";
     }
 
     /// <summary>

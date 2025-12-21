@@ -136,11 +136,11 @@ public class MacBuilder(
             await macUeRunner.MakeDirectory(remoteOutputDir);
         }
 
+        var logFilePath = Path.Combine(GameDir, "BuildGamePackage.log");
+
         try
         {
             var buildCookRunArgs = UECommandsHelper.GetBuildCookRunArgs(ProjectFilePath, remoteOutputDir, GamePlatform.Mac, EditorPlatform.Mac);
-            
-            var logFilePath = Path.Combine(GameDir, "BuildGamePackage.log");
             
             var command = $"\"{RunUatBatPath}\" {buildCookRunArgs}";
 
@@ -148,16 +148,29 @@ public class MacBuilder(
 
             await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command,
                                _pluginConfig.EnvironmentVariableMap))
+                
             {
                 logger.LogInformation(logLine);
                 await writer.WriteLineAsync(logLine);
             }
 
-            logger.LogInformation("Game packaging completed successfully.");
+            logger.LogInformation("Game packaging script execution finished.");
         }
         catch (Exception ex)
         {
             logger.LogError($"Game packaging failed: {ex.Message}");
+            return false;
+        }
+
+        // Check build log for success
+        var logContent = await fileSystem.ReadAllTextAsync(logFilePath);
+        if (logContent.Contains("AutomationTool exiting with ExitCode=0") || logContent.Contains("BUILD SUCCESSFUL"))
+        {
+            logger.LogInformation("Game packaging completed successfully based on log analysis.");
+        }
+        else
+        {
+            logger.LogError("Game packaging failed based on log analysis.");
             return false;
         }
 
@@ -396,8 +409,8 @@ public class MacBuilder(
             var pluginDestinationPath = GetEngineTargetPluginDirectory(engineVersion);
 
             // Check if the packaged plugin exists in the local PackageDir
-            var localPackagedPluginDir = $"{macPackagePath}/Plugin";
-            if (!await macUeRunner.DirectoryExists(localPackagedPluginDir))
+            var localPackagedPluginDir = Path.Combine(PackageDir, "Plugin");
+            if (!fileSystem.DirectoryExists(localPackagedPluginDir))
             {
                 logger.LogWarning($"Packaged plugin directory not found locally: {localPackagedPluginDir}");
                 return;
