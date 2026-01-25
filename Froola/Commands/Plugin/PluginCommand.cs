@@ -471,7 +471,15 @@ public class PluginCommand(
         }
 
         _logger.LogInformation($"Zipping game package to {zipFilePath}");
-        ZipFile.CreateFromDirectory(gamePackageDir, zipFilePath);
+        try
+        {
+            ZipFile.CreateFromDirectory(gamePackageDir, zipFilePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to zip game package from {GamePackageDir} to {ZipFilePath}", gamePackageDir, zipFilePath);
+            throw;
+        }
     }
 
     private string GetPluginVersion(string sourceDirectory)
