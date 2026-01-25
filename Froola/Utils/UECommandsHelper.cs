@@ -183,10 +183,10 @@ public static class UECommandsHelper
 
         if (editorPlatform == EditorPlatform.Mac && targetPlatform == GamePlatform.Mac)
         {
-            // For UE5.4+ on Apple Silicon Mac, we might need to specify architecture or use MacArm64
-            // Based on the error "Platform Mac is not a valid platform to build", 
-            // it's likely it expects MacArm64 or an explicit architecture flag.
-            // Let's try adding -architecture=arm64 which is often required for modern Mac builds in UAT.
+            // For UE5.4+ on Apple Silicon Mac, UAT may require an explicit architecture when building Mac targets.
+            // Adding -architecture=arm64 has been observed to fix the "Platform Mac is not a valid platform to build" error
+            // in our Apple Silicon environment. If other editor/target platform combinations later require explicit
+            // architectures, extend this logic here (or make it data-driven) rather than adding ad-hoc flags elsewhere.
             extraArgs = " -architecture=arm64";
         }
         

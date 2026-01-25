@@ -39,7 +39,7 @@ public interface IBuilder
     Task<bool> BuildGamePackageAsync(UEVersion engineVersion);
 
     /// <summary>
-    /// Gets the game package directory for the specified engine version.
+    /// Gets the game package directory.
     /// </summary>
     string GetGameDirectory();
 }

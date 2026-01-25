@@ -308,11 +308,8 @@ public class WindowsBuilder(
         }
         catch (ProcessErrorException ex)
         {
-            if (ex.ExitCode != 0)
-            {
-                logger.LogError($"Game packaging failed: {ex.Message}");
-                return false;
-            }
+            logger.LogError($"Game packaging failed: {ex.Message}");
+            return false;
         }
         catch (Exception ex)
         {

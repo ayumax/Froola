@@ -325,7 +325,8 @@ public class LinuxBuilder(
 
         try
         {
-            await using var writer = new StreamWriter(Path.Combine(PackageDir, "BuildGamePackage.log"));
+            _fileSystem.CreateDirectory(GameDir);
+            await using var writer = new StreamWriter(Path.Combine(GameDir, "BuildGamePackage.log"));
 
             await foreach (var logLine in dockerRunner.RunContainer(dockerImage, command, RepositoryPath,
                                volumeMappings, _pluginConfig.EnvironmentVariableMap))
