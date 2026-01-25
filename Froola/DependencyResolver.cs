@@ -72,24 +72,19 @@ public sealed class DependencyResolver : IDisposable
     {
         Dispose();
 
-        _host = Host.CreateDefaultBuilder()
-            .ConfigureServices((context, services) =>
-            {
-                services.AddSingleton(this);
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        builder.Services.AddSingleton(this);
 
-                containerBuilder.Register(services);
+        containerBuilder.Register(builder.Services);
 
-                foreach (var objectToRegister in additionalObjects)
-                {
-                    services.AddSingleton(objectToRegister.GetType(), objectToRegister);
-                }
-            })
-            .ConfigureLogging(logging =>
-            {
-                logging.ClearProviders();
-                logging.AddConsole();
-            })
-            .Build();
+        foreach (var objectToRegister in additionalObjects)
+        {
+            builder.Services.AddSingleton(objectToRegister.GetType(), objectToRegister);
+        }
+
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
+        _host = builder.Build();
 
         var baseLogger = Resolve<IFroolaLogger>();
         baseLogger.SetSaveDirectory(logSavePath);

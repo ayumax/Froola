@@ -304,7 +304,6 @@ public class WindowsBuilder(
             await unrealRunner.RunBuildScript(RunUatBatPath, buildCookRunArgs, Path.GetDirectoryName(ProjectFilePath)!, logFilePath, _pluginConfig.EnvironmentVariableMap);
             
             logger.LogInformation("Game packaging completed successfully.");
-            return true;
         }
         catch (ProcessErrorException ex)
         {
