@@ -155,7 +155,6 @@ public class MacBuilder(
 
             await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command,
                                _pluginConfig.EnvironmentVariableMap))
-                
             {
                 logger.LogInformation(logLine);
                 await writer.WriteLineAsync(logLine);
