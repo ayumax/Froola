@@ -29,7 +29,7 @@ public class PluginCommand(
     private GitConfig _gitConfig = null!;
     private IGitClient _gitClient = null!;
     private IFileSystem _fileSystem = null!;
-    private Dictionary<UEVersion, string> _baseRepoPathMap = new();
+    private readonly Dictionary<UEVersion, string> _baseRepoPathMap = new();
 
     private IFroolaLogger<PluginCommand> _logger = null!;
 
