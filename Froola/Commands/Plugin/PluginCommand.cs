@@ -477,7 +477,7 @@ public class PluginCommand(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to zip game package from {GamePackageDir} to {ZipFilePath}", gamePackageDir, zipFilePath);
+            _logger.LogError($"Failed to zip game package from {gamePackageDir} to {zipFilePath}", ex);
             throw;
         }
     }
