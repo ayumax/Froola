@@ -330,18 +330,16 @@ public class PluginCommand(
 
         bool isSuccess = true;
         
+        List<string> results = new List<string>();
+        
         foreach (var (engineVersion, value) in buildResultsMap)
         {
             foreach (var buildResult in value)
             {
-                _logger.LogInformation(
-                    $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Build    : {buildResult.StatusOfBuild}");
-                _logger.LogInformation(
-                    $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Test    : {buildResult.StatusOfTest}");
-                _logger.LogInformation(
-                    $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Plugin Package : {buildResult.StatusOfPackage}");      
-                _logger.LogInformation(
-                    $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Game Package : {buildResult.StatusOfGamePackage}");
+                results.Add($"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Build    : {buildResult.StatusOfBuild}");
+                results.Add($"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Test    : {buildResult.StatusOfTest}");
+                results.Add($"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Plugin Package : {buildResult.StatusOfPackage}");
+                results.Add($"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Game Package : {buildResult.StatusOfGamePackage}");
                 
                 if (!buildResult.IsSuccess)
                 {
@@ -350,8 +348,23 @@ public class PluginCommand(
             }
         }
         
-        _logger.LogInformation($"Froola Result : {(isSuccess ? "Success" : "Failed")}");
+        if (!_fileSystem.DirectoryExists(_pluginConfig.ResultPath))
+        {
+            _fileSystem.CreateDirectory(_pluginConfig.ResultPath);
+        }
 
+        var resultFilePath = Path.Combine(_pluginConfig.ResultPath, isSuccess ? "Success" : "Fail");
+        var fileContent = string.Empty;
+        foreach (var resultLine in results)
+        {
+            fileContent += resultLine + Environment.NewLine;
+            _logger.LogInformation(resultLine);
+        }
+        
+        _fileSystem.WriteAllText(resultFilePath, fileContent);
+        
+        _logger.LogInformation($"Froola Result : {(isSuccess ? "Success" : "Failed")}");
+        
         _logger.LogInformation("-------------------------------------------");
     }
 
