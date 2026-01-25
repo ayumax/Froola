@@ -107,6 +107,13 @@ public class MacBuilder(
                         : BuildStatus.Failed;
                 }
 
+                if (_pluginConfig.RunGamePackage)
+                {
+                    result.StatusOfGamePackage = await BuildGamePackageAsync(engineVersion)
+                        ? BuildStatus.Success
+                        : BuildStatus.Failed;
+                }
+
                 return result;
             }
             finally
@@ -125,6 +132,66 @@ public class MacBuilder(
 
             return result;
         }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
+    {
+        var remoteOutputDir = Path.Combine(RepositoryPath, "GamePackage").Replace("\\", "/");
+        if (!await macUeRunner.DirectoryExists(remoteOutputDir))
+        {
+            await macUeRunner.MakeDirectory(remoteOutputDir);
+        }
+
+        var logFilePath = Path.Combine(GameDir, "BuildGamePackage.log");
+
+        try
+        {
+            var buildCookRunArgs = UECommandsHelper.GetBuildCookRunArgs(ProjectFilePath, remoteOutputDir, GamePlatform.Mac, EditorPlatform.Mac);
+            
+            var command = $"\"{RunUatBatPath}\" {buildCookRunArgs}";
+
+            await using var writer = new StreamWriter(logFilePath);
+
+            await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command,
+                               _pluginConfig.EnvironmentVariableMap))
+            {
+                logger.LogInformation(logLine);
+                await writer.WriteLineAsync(logLine);
+            }
+
+            logger.LogInformation("Game packaging script execution finished.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Game packaging failed: {ex.Message}");
+            return false;
+        }
+
+        // Check build log for success
+        var logContent = await fileSystem.ReadAllTextAsync(logFilePath);
+        if (logContent.Contains("AutomationTool exiting with ExitCode=0") || logContent.Contains("BUILD SUCCESSFUL"))
+        {
+            logger.LogInformation("Game packaging completed successfully based on log analysis.");
+        }
+        else
+        {
+            logger.LogError("Game packaging failed based on log analysis.");
+            return false;
+        }
+
+        var downloadSuccess = await macUeRunner.DownloadDirectory(remoteOutputDir, GameDir);
+        if (downloadSuccess)
+        {
+            logger.LogInformation($"Successfully downloaded game package to {GameDir}");
+        }
+        else
+        {
+            logger.LogError($"Failed to download game package from {remoteOutputDir}");
+            return false;
+        }
+
+        return true;
     }
 
     /// <inheritdoc cref="IBuilder" />
@@ -348,8 +415,8 @@ public class MacBuilder(
             var pluginDestinationPath = GetEngineTargetPluginDirectory(engineVersion);
 
             // Check if the packaged plugin exists in the local PackageDir
-            var localPackagedPluginDir = $"{macPackagePath}/Plugin";
-            if (!await macUeRunner.DirectoryExists(localPackagedPluginDir))
+            var localPackagedPluginDir = Path.Combine(PackageDir, "Plugin");
+            if (!fileSystem.DirectoryExists(localPackagedPluginDir))
             {
                 logger.LogWarning($"Packaged plugin directory not found locally: {localPackagedPluginDir}");
                 return;

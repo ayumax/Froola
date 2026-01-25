@@ -169,6 +169,31 @@ public static class UECommandsHelper
     }
 
     /// <summary>
+    /// Gets BuildCookRun arguments for RunUAT.
+    /// </summary>
+    /// <param name="projectFilePath">Path to the .uproject file.</param>
+    /// <param name="outputDir">Output directory for the packaged game.</param>
+    /// <param name="targetPlatform">Target game platform.</param>
+    /// <param name="editorPlatform">Target editor platform.</param>
+    /// <returns>Arguments string for BuildCookRun.</returns>
+    public static string GetBuildCookRunArgs(string projectFilePath, string outputDir, GamePlatform targetPlatform, EditorPlatform editorPlatform)
+    {
+        var platformStr = targetPlatform.ToString();
+        var extraArgs = string.Empty;
+
+        if (editorPlatform == EditorPlatform.Mac && targetPlatform == GamePlatform.Mac)
+        {
+            // For UE5.4+ on Apple Silicon Mac, UAT may require an explicit architecture when building Mac targets.
+            // Adding -architecture=arm64 has been observed to fix the "Platform Mac is not a valid platform to build" error
+            // in our Apple Silicon environment. If other editor/target platform combinations later require explicit
+            // architectures, extend this logic here (or make it data-driven) rather than adding ad-hoc flags elsewhere.
+            extraArgs = " -architecture=arm64";
+        }
+        
+        return $"BuildCookRun -project={projectFilePath} -archive -archivedirectory={outputDir} -platform={platformStr}{extraArgs} -clientconfig=Shipping -nop4 -build -cook -stage -pak -allmaps -nocompileeditor -unattended -utf8";
+    }
+
+    /// <summary>
     /// Gets the path to the GenerateProjectFiles script.
     /// </summary>
     /// <param name="windowsConfig">Configuration for Windows.</param>

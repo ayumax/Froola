@@ -43,6 +43,11 @@ public struct BuildResult
     public BuildStatus StatusOfPackage { get; set; }
 
     /// <summary>
+    ///     Status of the game package build.
+    /// </summary>
+    public BuildStatus StatusOfGamePackage { get; set; }
+
+    /// <summary>
     /// Operating system.
     /// </summary>
     public EditorPlatform Os { get; set; }
@@ -51,4 +56,10 @@ public struct BuildResult
     /// Engine version string.
     /// </summary>
     public UEVersion EngineVersion { get; set; }
+    
+    public bool IsSuccess => 
+        StatusOfBuild == BuildStatus.Success &&
+        StatusOfTest == BuildStatus.Success &&
+        StatusOfPackage == BuildStatus.Success &&
+        StatusOfGamePackage == BuildStatus.Success;
 }

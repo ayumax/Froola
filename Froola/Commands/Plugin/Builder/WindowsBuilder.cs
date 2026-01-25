@@ -88,6 +88,12 @@ public class WindowsBuilder(
             }
         }
 
+        if (_pluginConfig.RunGamePackage)
+        {
+            // Game Package
+            result.StatusOfGamePackage = await BuildGamePackageAsync(engineVersion) ? BuildStatus.Success : BuildStatus.Failed;
+        }
+
         return result;
     }
 
@@ -280,6 +286,37 @@ public class WindowsBuilder(
         // Get version-specific destination path or fall back to default
         return Path.Combine(_windowsConfig.WindowsUnrealBasePath, $"UE_{engineVersion.ToVersionString()}",
             @"Engine\Plugins\Marketplace", _pluginConfig.PluginName);
+    }
+
+    /// <inheritdoc />
+    public virtual async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
+    {
+        var outputDir = GameDir;
+        _fileSystem.CreateDirectory(outputDir);
+
+        try
+        {
+            var targetPlatform = GamePlatform.Win64;
+            var buildCookRunArgs = UECommandsHelper.GetBuildCookRunArgs(ProjectFilePath, outputDir, targetPlatform, EditorPlatform.Windows);
+            
+            var logFilePath = Path.Combine(outputDir, "BuildGamePackage.log");
+            
+            await unrealRunner.RunBuildScript(RunUatBatPath, buildCookRunArgs, Path.GetDirectoryName(ProjectFilePath)!, logFilePath, _pluginConfig.EnvironmentVariableMap);
+            
+            logger.LogInformation("Game packaging completed successfully.");
+        }
+        catch (ProcessErrorException ex)
+        {
+            logger.LogError($"Game packaging failed: {ex.Message}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"An unexpected error occurred during game packaging: {ex.Message}");
+            return false;
+        }
+
+        return true;
     }
 
     /// <summary>

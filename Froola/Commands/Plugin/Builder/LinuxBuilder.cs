@@ -90,6 +90,13 @@ public class LinuxBuilder(
                 }
             }
 
+            if (_pluginConfig.RunGamePackage)
+            {
+                result.StatusOfGamePackage = await BuildGamePackageAsync(engineVersion)
+                    ? BuildStatus.Success
+                    : BuildStatus.Failed;
+            }
+
             return result;
         }
         catch (Exception ex)
@@ -292,6 +299,59 @@ public class LinuxBuilder(
             $"Test result: {(statusOfTest ? "SUCCESS" : "FAILURE")}");
 
         return statusOfTest;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
+    {
+        var gamePackageOutputDirInDocker = Path.Combine(PROJECT_DIR_IN_DOCKER, "GamePackage").Replace("\\", "/");
+        var projectFilePathInDocker = Path.Combine(PROJECT_DIR_IN_DOCKER, $"{_pluginConfig.ProjectName}.uproject").Replace("\\", "/");
+        var targetPlatform = GamePlatform.Linux;
+        var buildCookRunArgs = UECommandsHelper.GetBuildCookRunArgs(projectFilePathInDocker, gamePackageOutputDirInDocker, targetPlatform, EditorPlatform.Linux);
+
+        var volumeMappings = new Dictionary<string, string>
+        {
+            { _repoPathInWindows, PROJECT_DIR_IN_DOCKER }
+        };
+
+        if (linuxConfig.CopyPluginsToDocker)
+        {
+            var pluginSourcePath = GetEngineTargetPluginDirectory(engineVersion, false);
+            volumeMappings[pluginSourcePath] = UePluginsDirInDocker;
+        }
+
+        var dockerImage = GetDockerImageName(engineVersion).ToLowerInvariant();
+        var command = $"\"{RunUatBatPath}\" {buildCookRunArgs}";
+
+        try
+        {
+            _fileSystem.CreateDirectory(GameDir);
+            await using var writer = new StreamWriter(Path.Combine(GameDir, "BuildGamePackage.log"));
+
+            await foreach (var logLine in dockerRunner.RunContainer(dockerImage, command, RepositoryPath,
+                               volumeMappings, _pluginConfig.EnvironmentVariableMap))
+            {
+                logger.LogInformation($"{logLine}");
+                await writer.WriteLineAsync(logLine);
+            }
+
+            logger.LogInformation("Game packaging completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Docker error during game packaging: {ex.Message}", ex);
+            return false;
+        }
+
+        var dockerPackagePath = Path.Combine(_repoPathInWindows, "GamePackage");
+        if (_fileSystem.DirectoryExists(dockerPackagePath))
+        {
+            var localOutputDir = GameDir;
+            _fileSystem.CreateDirectory(localOutputDir);
+            _fileSystem.CopyDirectory(dockerPackagePath, localOutputDir);
+        }
+
+        return true;
     }
 
     /// <summary>

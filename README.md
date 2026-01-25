@@ -227,22 +227,25 @@ This command will execute the build and packaging process based on the settings 
 
 ### plugin Command Main Arguments
 
-| Option Name                  | Type         | Description                                             |
-|------------------------------|------------|--------------------------------------------------|
-| -n, --plugin-name            | string     | Plugin name (required)                             |
-| -p, --project-name           | string     | Project name (required)                           |
-| -u, --git-repository-url     | string     | Git repository URL                         |
-| -b, --git-branch             | string     | Branch name                               |
-| -g, --git-branches           | string[]?  | UE version-specific Git branches                 |
-| -l, --local-repository-path  | string     | Local repository path                               |
-| -e, --editor-platforms       | string[]?  | Editor platforms (e.g., Windows, Mac, Linux)|
-| -v, --engine-versions        | string[]?  | Unreal Engine versions (e.g., 5.3, 5.4, 5.5)     |
-| -o, --result-path            | string?    | Result output directory                                       |
-| -t, --run-test               | bool?      | Run tests                                       |
-| -c, --run-package            | bool?      | Run packaging                                   |
-| -g, --package-platforms      | string[]?  | Packaging platforms (Win64, Mac, Linux, Android, IOS)|
-| -d, --keep-binary-directory  | bool?      | Whether to keep the Binary directory after the operation |
-| -z, --is-zipped              | bool?      | Whether to zip the plugin output                |
+| Option Name                    | Type         | Description                                             |
+|--------------------------------|------------|--------------------------------------------------|
+| -n, --plugin-name              | string     | Plugin name (required)                             |
+| -p, --project-name             | string     | Project name (required)                           |
+| -u, --git-repository-url       | string     | Git repository URL                         |
+| -b, --git-branch               | string     | Branch name                               |
+| -gb, --git-branches            | string[]?  | UE version-specific Git branches                 |
+| -l, --local-repository-path    | string     | Local repository path                               |
+| -e, --editor-platforms         | string[]?  | Editor platforms (e.g., Windows, Mac, Linux)|
+| -v, --engine-versions          | string[]?  | Unreal Engine versions (e.g., 5.3, 5.4, 5.5)     |
+| -o, --result-path              | string?    | Result output directory                                       |
+| -t, --run-test                 | bool?      | Run tests                                       |
+| -c, --run-package              | bool?      | Run packaging                                   |
+| -gp, --run-game-package        | bool?      | Run game packaging                              |
+| -g, --package-platforms        | string[]?  | Packaging platforms (Win64, Mac, Linux, Android, IOS)|
+| -d, --keep-binary-directory    | bool?      | Whether to keep the Binary directory after the operation |
+| -z, --is-zipped                | bool?      | Whether to zip the plugin output                |
+| -r, --copy-package-after-build | bool?    | Copy packaged plugin to configured destination paths |
+| -i, --environment-variables    | string[]?  | Environment variables                           |
 
 
 ※Non-required items can also be set in `appsettings.json`. Command-line arguments take priority over `appsettings.json` settings.

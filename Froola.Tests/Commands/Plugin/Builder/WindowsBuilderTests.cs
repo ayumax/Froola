@@ -60,7 +60,7 @@ public class WindowsBuilderTests
         await builder.PrepareRepository(baseRepo, version);
 
         builder.InitDirectory(version);
-        _mockFileSystem.Verify(f => f.CreateDirectory(It.IsAny<string>()), Times.Exactly(3));
+        _mockFileSystem.Verify(f => f.CreateDirectory(It.IsAny<string>()), Times.Exactly(4));
     }
 
     [Fact]
@@ -90,10 +90,12 @@ public class WindowsBuilderTests
         public int BuildAsyncCallCount { get; private set; }
         public int TestAsyncCallCount { get; private set; }
         public int PackageBuildAsyncCallCount { get; private set; }
+        public int BuildGamePackageAsyncCallCount { get; private set; }
 
         public bool BuildAsyncResult { get; set; } = true;
         public bool TestAsyncResult { get; set; } = true;
         public bool PackageBuildAsyncResult { get; set; } = true;
+        public bool BuildGamePackageAsyncResult { get; set; } = true;
 
         protected override async Task<bool> BuildAsync()
         {
@@ -111,6 +113,12 @@ public class WindowsBuilderTests
         {
             PackageBuildAsyncCallCount++;
             return await Task.FromResult(PackageBuildAsyncResult);
+        }
+
+        public override async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
+        {
+            BuildGamePackageAsyncCallCount++;
+            return await Task.FromResult(BuildGamePackageAsyncResult);
         }
     }
 
@@ -206,4 +214,26 @@ public class WindowsBuilderTests
         Assert.Equal(1, builder.PackageBuildAsyncCallCount);
     }
 
+    [Fact]
+    public async Task Run_RunGamePackageCalledIfFlagTrue()
+    {
+        var builder = new TestableWindowsBuilder(
+            _pluginConfig, _windowsConfig, _macConfig,
+            _mockUnrealRunner.Object, _mockFileSystem.Object,
+            _mockTestResultsEvaluator.Object, _mockLogger.Object)
+        {
+            BuildAsyncResult = true,
+            BuildGamePackageAsyncResult = true
+        };
+        _pluginConfig.RunTest = false;
+        _pluginConfig.RunPackage = false;
+        _pluginConfig.RunGamePackage = true;
+        const UEVersion version = UEVersion.UE_5_3;
+        const string baseRepo = "C:/tmp/TestRepoBase";
+        await builder.PrepareRepository(baseRepo, version);
+        builder.InitDirectory(version);
+        var result = await builder.Run(version);
+        Assert.Equal(1, builder.BuildGamePackageAsyncCallCount);
+        Assert.Equal(BuildStatus.Success, result.StatusOfGamePackage);
+    }
 }

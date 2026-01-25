@@ -30,4 +30,16 @@ public interface IBuilder
     /// Cleans up the temporary directory.
     /// </summary>
     Task CleanupTempDirectory();
+
+    /// <summary>
+    /// Builds the game package for the specified engine version.
+    /// </summary>
+    /// <param name="engineVersion">Engine version</param>
+    /// <returns>True if the build was successful.</returns>
+    Task<bool> BuildGamePackageAsync(UEVersion engineVersion);
+
+    /// <summary>
+    /// Gets the game package directory.
+    /// </summary>
+    string GetGameDirectory();
 }
