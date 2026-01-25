@@ -118,10 +118,7 @@ public abstract class BuilderBase(
     }
     
     /// <summary>
-    /// Checks the package build result for the specified engine version.
-    /// </summary>
-    /// <summary>
-    /// Checks the package build result for the specified engine version.
+    /// Checks the game package build result for the specified engine version.
     /// </summary>
     protected BuildStatus CheckPackageBuildResult(UEVersion engineVersion)
     {
