@@ -328,6 +328,8 @@ public class PluginCommand(
     {
         _logger.LogInformation("-------------------------------------------");
 
+        bool isSuccess = true;
+        
         foreach (var (engineVersion, value) in buildResultsMap)
         {
             foreach (var buildResult in value)
@@ -337,9 +339,18 @@ public class PluginCommand(
                 _logger.LogInformation(
                     $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Test    : {buildResult.StatusOfTest}");
                 _logger.LogInformation(
-                    $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Package : {buildResult.StatusOfPackage}");
+                    $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Plugin Package : {buildResult.StatusOfPackage}");      
+                _logger.LogInformation(
+                    $"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Game Package : {buildResult.StatusOfGamePackage}");
+                
+                if (!buildResult.IsSuccess)
+                {
+                    isSuccess = false;
+                }
             }
         }
+        
+        _logger.LogInformation($"Froola Result : {(isSuccess ? "Success" : "Failed")}");
 
         _logger.LogInformation("-------------------------------------------");
     }

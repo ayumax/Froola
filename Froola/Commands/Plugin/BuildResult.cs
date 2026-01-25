@@ -56,4 +56,10 @@ public struct BuildResult
     /// Engine version string.
     /// </summary>
     public UEVersion EngineVersion { get; set; }
+    
+    public bool IsSuccess => 
+        StatusOfBuild == BuildStatus.Success &&
+        StatusOfTest == BuildStatus.Success &&
+        StatusOfPackage == BuildStatus.Success &&
+        StatusOfGamePackage == BuildStatus.Success;
 }
