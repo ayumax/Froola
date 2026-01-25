@@ -42,7 +42,7 @@ public class PluginCommand(
     /// <param name="projectName">-p,Name of the project</param>
     /// <param name="gitRepositoryUrl">-u,URL of the git repository</param>
     /// <param name="gitBranch">-b,Branch of the git repository</param>
-    /// <param name="gitBranches">g,Branches of the git repository (format version:branch)</param>
+    /// <param name="gitBranches">gb,Branches of the git repository (format version:branch)</param>
     /// <param name="localRepositoryPath">-l,Path to the local repository</param>
     /// <param name="editorPlatforms">-e,Editor platforms</param>
     /// <param name="engineVersions">-v,Engine versions</param>
