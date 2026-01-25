@@ -48,7 +48,7 @@ public class PluginCommand(
     /// <param name="engineVersions">-v,Engine versions</param>
     /// <param name="resultPath">-o,Path to save results</param>
     /// <param name="runTest">-t,Run tests</param>
-    /// <param name="runPackage">-c,Run packaging</param>
+    /// <param name="runPackage">-c,Run Plugin packaging</param>
     /// <param name="runGamePackage">-gp,Run game packaging</param>
     /// <param name="packagePlatforms">-g,Game platforms</param>
     /// <param name="keepBinaryDirectory">-d,Exclude the binary directory.</param>
@@ -354,6 +354,7 @@ public class PluginCommand(
         if (!_fileSystem.DirectoryExists(packageDir))
         {
             _logger.LogInformation($"No packages directory found for {engineVersion.ToFullVersionString()}");
+            return;
         }
 
         var mergedDir = Path.Combine(_pluginConfig.ResultPath, "release",
@@ -372,8 +373,9 @@ public class PluginCommand(
             var platformBinariesDir = Path.Combine(platformPackageDir, "Binaries");
             var platformIntermediateDir = Path.Combine(platformPackageDir, "Intermediate");
 
-            if (!_fileSystem.DirectoryExists(platformBinariesDir) ||
-                !_fileSystem.DirectoryExists(platformIntermediateDir))
+            if (!_fileSystem.DirectoryExists(platformPackageDir) ||
+                 !_fileSystem.DirectoryExists(platformBinariesDir) ||
+                 !_fileSystem.DirectoryExists(platformIntermediateDir))
             {
                 continue;
             }
