@@ -357,3 +357,6 @@ MigrationBackup/
 .vscode/
 
 appsettings.json
+
+CLAUDE.md
+AGENTS.md
