@@ -189,6 +189,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
                 runTest,
                 runPackage,
                 null,
+                null,
                 packagePlatforms
             );
             // Assert values after run
@@ -206,6 +207,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
                 resultPath,
                 runTest,
                 runPackage,
+                null,
                 null,
                 packagePlatforms
             ));
@@ -281,6 +283,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             pluginConfig.ResultPath,    
             pluginConfig.RunTest,
             pluginConfig.RunPackage,
+            pluginConfig.RunPackagePreflight,
             null,
             ["Win64"],
             pluginConfig.KeepBinaryDirectory,
@@ -351,6 +354,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             pluginConfig.ResultPath,
             pluginConfig.RunTest,
             pluginConfig.RunPackage,
+            pluginConfig.RunPackagePreflight,
             null,
             ["Win64"]
         ));
@@ -418,6 +422,7 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             pluginConfig.ResultPath,
             pluginConfig.RunTest,
             pluginConfig.RunPackage,
+            pluginConfig.RunPackagePreflight,
             null,
             ["Win64"]
         ));
@@ -467,5 +472,45 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
         // Assert that the config default value was preserved
         Assert.True(originalValue); // Original was true
         Assert.True(pluginConfig.CopyPackageAfterBuild); // Still true (unchanged)
+    }
+
+    [Fact]
+    public void Run_PackagePreflight_Parameter_SetsConfigValue()
+    {
+        var pluginConfig = new PluginConfig
+        {
+            RunPackagePreflight = false // Default value
+        };
+
+        var originalValue = pluginConfig.RunPackagePreflight;
+
+        bool? runPackagePreflightParam = true;
+        if (runPackagePreflightParam.HasValue)
+        {
+            pluginConfig.RunPackagePreflight = runPackagePreflightParam.Value;
+        }
+
+        Assert.False(originalValue);
+        Assert.True(pluginConfig.RunPackagePreflight);
+    }
+
+    [Fact]
+    public void Run_PackagePreflight_DefaultsToConfigValue()
+    {
+        var pluginConfig = new PluginConfig
+        {
+            RunPackagePreflight = true // Config default
+        };
+
+        var originalValue = pluginConfig.RunPackagePreflight;
+
+        bool? runPackagePreflightParam = null;
+        if (runPackagePreflightParam.HasValue)
+        {
+            pluginConfig.RunPackagePreflight = runPackagePreflightParam.Value;
+        }
+
+        Assert.True(originalValue);
+        Assert.True(pluginConfig.RunPackagePreflight);
     }
 }
