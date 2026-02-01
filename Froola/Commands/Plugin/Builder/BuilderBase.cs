@@ -127,6 +127,12 @@ public abstract class BuilderBase(
             engineVersion);
     }
 
+    protected static bool IsUatSuccessLog(string logContent)
+    {
+        return logContent.Contains("AutomationTool exiting with ExitCode=0") ||
+               logContent.Contains("BUILD SUCCESSFUL");
+    }
+
     /// <inheritdoc />
     public string GetGameDirectory()
     {

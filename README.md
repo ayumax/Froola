@@ -151,6 +151,7 @@ This feature is useful when your plugin depends on other custom plugins that are
     "EngineVersions": ["5.5"],
     "ResultPath": "",
     "RunTest": true,
+    "RunPackagePreflight": false,
     "RunPackage": true,
     "PackagePlatforms": ["Win64","Mac","Linux","Android","IOS"]
   },
@@ -193,6 +194,7 @@ Froola.exe init-config -o "path to save config template(*.json)"
 | Plugin.EngineVersions                | array      | Unreal Engine versions to use                 | ["5.5"]                                      |
 | Plugin.ResultPath                    | string     | Result output directory (※5)                     | "C:\\UEPluginResults"                        |
 | Plugin.RunTest                       | bool       | Run tests                                       | true                                          |
+| Plugin.RunPackagePreflight           | bool       | Run Shipping compile-only preflight             | false                                         |
 | Plugin.RunPackage                    | bool       | Run packaging                                   | true                                          |
 | Plugin.PackagePlatforms              | array      | Packaging platforms to use                     | ["Win64","Mac","Linux","Android","IOS"]     |
 | Plugin.IsZipped                      | bool       | Whether to zip the plugin output                | true                                          |

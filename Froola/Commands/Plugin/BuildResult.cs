@@ -43,6 +43,11 @@ public struct BuildResult
     public BuildStatus StatusOfPackage { get; set; }
 
     /// <summary>
+    ///     Status of the package preflight build.
+    /// </summary>
+    public BuildStatus StatusOfPackagePreflight { get; set; }
+
+    /// <summary>
     ///     Status of the game package build.
     /// </summary>
     public BuildStatus StatusOfGamePackage { get; set; }
@@ -60,6 +65,7 @@ public struct BuildResult
     public bool IsSuccess =>
         StatusOfBuild != BuildStatus.Failed &&
         StatusOfTest != BuildStatus.Failed &&
+        StatusOfPackagePreflight != BuildStatus.Failed &&
         StatusOfPackage != BuildStatus.Failed &&
         StatusOfGamePackage != BuildStatus.Failed;
 }
