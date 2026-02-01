@@ -5,7 +5,7 @@
         <OutputType>Exe</OutputType>
         <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
-        <Version>0.7.2</Version>
+        <Version>0.8.0</Version>
         <Authors>ayumax</Authors>
         <Product>Froola</Product>
         <Description>A toolkit for building, testing, and managing Unreal Engine plugins with automation support</Description>
