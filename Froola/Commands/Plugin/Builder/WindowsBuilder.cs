@@ -45,7 +45,8 @@ public class WindowsBuilder(
             EngineVersion = engineVersion,
             StatusOfBuild = BuildStatus.None,
             StatusOfTest = BuildStatus.None,
-            StatusOfPackage = BuildStatus.None
+            StatusOfPackage = BuildStatus.None,
+            StatusOfPackagePreflight = BuildStatus.None
         };
 
         // Build
@@ -68,6 +69,17 @@ public class WindowsBuilder(
 
             logger.LogInformation(
                 $"Final test result: {(result.StatusOfTest == BuildStatus.Success ? "SUCCESS" : "FAILURE")}");
+        }
+
+        if (_pluginConfig.RunPackagePreflight)
+        {
+            if (!await PackagePreflightAsync(engineVersion))
+            {
+                result.StatusOfPackagePreflight = BuildStatus.Failed;
+                return result;
+            }
+
+            result.StatusOfPackagePreflight = BuildStatus.Success;
         }
 
         if (_pluginConfig.RunPackage)
@@ -95,6 +107,34 @@ public class WindowsBuilder(
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Runs a Shipping compile-only preflight using BuildCookRun.
+    /// </summary>
+    protected virtual async Task<bool> PackagePreflightAsync(UEVersion engineVersion)
+    {
+        var workingDirectory = Path.GetDirectoryName(ProjectFilePath)!;
+        var preflightArgs = UECommandsHelper.GetBuildCookRunPreflightArgs(ProjectFilePath, GamePlatform.Win64,
+            EditorPlatform.Windows);
+        var logFilePath = Path.Combine(BuildResultDir, "PackagePreflight.log");
+
+        try
+        {
+            await unrealRunner.RunBuildScript(RunUatBatPath, preflightArgs, workingDirectory, logFilePath,
+                _pluginConfig.EnvironmentVariableMap);
+            logger.LogInformation("Package preflight completed successfully.");
+        }
+        catch (ProcessErrorException ex)
+        {
+            if (ex.ExitCode != 0)
+            {
+                logger.LogError($"Package preflight failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <inheritdoc cref="IBuilder" />

@@ -51,7 +51,12 @@ public class PluginConfig : IFroolaMergeConfig<PluginConfig>
     ///     Whether to run package
     /// </summary>
     public bool RunPackage { get; set; } = false;
-    
+
+    /// <summary>
+    ///     Whether to run package preflight (Shipping compile-only)
+    /// </summary>
+    public bool RunPackagePreflight { get; set; } = false;
+
     /// <summary>
     ///     Whether to run game package
     /// </summary>

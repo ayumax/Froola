@@ -49,6 +49,7 @@ public class PluginCommand(
     /// <param name="resultPath">-o,Path to save results</param>
     /// <param name="runTest">-t,Run tests</param>
     /// <param name="runPackage">-c,Run Plugin packaging</param>
+    /// <param name="runPackagePreflight">-pf,Run Shipping compile-only preflight</param>
     /// <param name="runGamePackage">-gp,Run game packaging</param>
     /// <param name="packagePlatforms">-g,Game platforms</param>
     /// <param name="keepBinaryDirectory">-d,Exclude the binary directory.</param>
@@ -70,6 +71,7 @@ public class PluginCommand(
         string? resultPath = null,
         bool? runTest = null,
         bool? runPackage = null,
+        bool? runPackagePreflight = null,
         bool? runGamePackage = null,
         [EnumArray(typeof(GamePlatform))] string[]? packagePlatforms = null,
         bool? keepBinaryDirectory = null,
@@ -92,6 +94,7 @@ public class PluginCommand(
             ResultPath = resultPath ?? configOptions.Value.ResultPath,
             RunTest = runTest ?? configOptions.Value.RunTest,
             RunPackage = runPackage ?? configOptions.Value.RunPackage,
+            RunPackagePreflight = runPackagePreflight ?? configOptions.Value.RunPackagePreflight,
             RunGamePackage = runGamePackage ?? configOptions.Value.RunGamePackage,
             PackagePlatforms = packagePlatforms is null
                 ? configOptions.Value.PackagePlatforms
@@ -338,6 +341,7 @@ public class PluginCommand(
             {
                 results.Add($"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Build    : {buildResult.StatusOfBuild}");
                 results.Add($"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Test    : {buildResult.StatusOfTest}");
+                results.Add($"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Package Preflight : {buildResult.StatusOfPackagePreflight}");
                 results.Add($"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Plugin Package : {buildResult.StatusOfPackage}");
                 results.Add($"[{engineVersion.ToFullVersionString()} {buildResult.Os}] Game Package : {buildResult.StatusOfGamePackage}");
                 

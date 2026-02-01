@@ -46,7 +46,8 @@ public class MacBuilder(
             EngineVersion = engineVersion,
             StatusOfBuild = BuildStatus.None,
             StatusOfTest = BuildStatus.None,
-            StatusOfPackage = BuildStatus.None
+            StatusOfPackage = BuildStatus.None,
+            StatusOfPackagePreflight = BuildStatus.None
         };
 
         if (!_isReady)
@@ -100,6 +101,18 @@ public class MacBuilder(
                     result.StatusOfTest = await TestAsync(engineVersion) ? BuildStatus.Success : BuildStatus.Failed;
                 }
 
+                if (_pluginConfig.RunPackagePreflight)
+                {
+                    result.StatusOfPackagePreflight = await PackagePreflightAsync(engineVersion)
+                        ? BuildStatus.Success
+                        : BuildStatus.Failed;
+
+                    if (result.StatusOfPackagePreflight == BuildStatus.Failed)
+                    {
+                        return result;
+                    }
+                }
+
                 if (_pluginConfig.RunPackage)
                 {
                     result.StatusOfPackage = await PackageBuildAsync(engineVersion)
@@ -132,6 +145,38 @@ public class MacBuilder(
 
             return result;
         }
+    }
+
+    /// <summary>
+    /// Runs a Shipping compile-only preflight using BuildCookRun.
+    /// </summary>
+    protected virtual async Task<bool> PackagePreflightAsync(UEVersion engineVersion)
+    {
+        var preflightArgs = UECommandsHelper.GetBuildCookRunPreflightArgs(ProjectFilePath, GamePlatform.Mac,
+            EditorPlatform.Mac);
+        var command = $"\"{RunUatBatPath}\" {preflightArgs}";
+        var logFilePath = Path.Combine(BuildResultDir, "PackagePreflight.log");
+
+        await using (var writer = new StreamWriter(logFilePath))
+        {
+            await foreach (var logLine in macUeRunner.ExecuteRemoteScriptWithLogsAsync(command,
+                               _pluginConfig.EnvironmentVariableMap))
+            {
+                logger.LogInformation(logLine);
+                await writer.WriteLineAsync(logLine);
+            }
+        }
+
+        logger.LogInformation("Package preflight finished");
+
+        var logContent = await fileSystem.ReadAllTextAsync(logFilePath);
+        if (!IsUatSuccessLog(logContent))
+        {
+            logger.LogError("Package preflight failed based on log analysis.");
+            return false;
+        }
+
+        return true;
     }
 
     /// <inheritdoc />

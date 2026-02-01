@@ -194,6 +194,26 @@ public static class UECommandsHelper
     }
 
     /// <summary>
+    /// Gets BuildCookRun arguments for a Shipping compile-only preflight.
+    /// </summary>
+    /// <param name="projectFilePath">Path to the .uproject file.</param>
+    /// <param name="targetPlatform">Target game platform.</param>
+    /// <param name="editorPlatform">Target editor platform.</param>
+    /// <returns>Arguments string for BuildCookRun preflight.</returns>
+    public static string GetBuildCookRunPreflightArgs(string projectFilePath, GamePlatform targetPlatform, EditorPlatform editorPlatform)
+    {
+        var platformStr = targetPlatform.ToString();
+        var extraArgs = string.Empty;
+
+        if (editorPlatform == EditorPlatform.Mac && targetPlatform == GamePlatform.Mac)
+        {
+            extraArgs = " -architecture=arm64";
+        }
+
+        return $"BuildCookRun -project={projectFilePath} -platform={platformStr}{extraArgs} -clientconfig=Shipping -build -skipcook -skippak -skipstage -nop4 -unattended -utf8output";
+    }
+
+    /// <summary>
     /// Gets the path to the GenerateProjectFiles script.
     /// </summary>
     /// <param name="windowsConfig">Configuration for Windows.</param>

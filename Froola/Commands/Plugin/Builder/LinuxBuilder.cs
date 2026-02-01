@@ -51,7 +51,8 @@ public class LinuxBuilder(
             EngineVersion = engineVersion,
             StatusOfBuild = BuildStatus.None,
             StatusOfTest = BuildStatus.None,
-            StatusOfPackage = BuildStatus.None
+            StatusOfPackage = BuildStatus.None,
+            StatusOfPackagePreflight = BuildStatus.None
         };
 
         try
@@ -75,6 +76,18 @@ public class LinuxBuilder(
             if (_pluginConfig.RunTest)
             {
                 result.StatusOfTest = await TestAsync(engineVersion) ? BuildStatus.Success : BuildStatus.Failed;
+            }
+
+            if (_pluginConfig.RunPackagePreflight)
+            {
+                result.StatusOfPackagePreflight = await PackagePreflightAsync(engineVersion)
+                    ? BuildStatus.Success
+                    : BuildStatus.Failed;
+
+                if (result.StatusOfPackagePreflight == BuildStatus.Failed)
+                {
+                    return result;
+                }
             }
 
             if (_pluginConfig.RunPackage)
@@ -104,6 +117,58 @@ public class LinuxBuilder(
             logger.LogError($"Error running Linux test for UE5.{engineVersion}: {ex.Message}", ex);
             return result;
         }
+    }
+
+    /// <summary>
+    /// Runs a Shipping compile-only preflight using BuildCookRun.
+    /// </summary>
+    protected virtual async Task<bool> PackagePreflightAsync(UEVersion engineVersion)
+    {
+        var preflightArgs = UECommandsHelper.GetBuildCookRunPreflightArgs(ProjectFilePath, GamePlatform.Linux,
+            EditorPlatform.Linux);
+        var command = $"\"{RunUatBatPath}\" {preflightArgs}";
+        var logFilePath = Path.Combine(BuildResultDir, "PackagePreflight.log");
+
+        var volumeMappings = new Dictionary<string, string>
+        {
+            { _repoPathInWindows, PROJECT_DIR_IN_DOCKER }
+        };
+
+        if (linuxConfig.CopyPluginsToDocker)
+        {
+            var pluginSourcePath = GetEngineTargetPluginDirectory(engineVersion, false);
+            volumeMappings[pluginSourcePath] = UePluginsDirInDocker;
+        }
+
+        var dockerImage = GetDockerImageName(engineVersion).ToLowerInvariant();
+
+        try
+        {
+            await using var writer = new StreamWriter(logFilePath);
+
+            await foreach (var logLine in dockerRunner.RunContainer(dockerImage, command, RepositoryPath,
+                               volumeMappings, _pluginConfig.EnvironmentVariableMap))
+            {
+                logger.LogInformation($"{logLine}");
+                await writer.WriteLineAsync(logLine);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Docker error: {ex.Message}", ex);
+            return false;
+        }
+
+        logger.LogInformation("Package preflight finished");
+
+        var logContent = await _fileSystem.ReadAllTextAsync(logFilePath);
+        if (!IsUatSuccessLog(logContent))
+        {
+            logger.LogError("Package preflight failed based on log analysis.");
+            return false;
+        }
+
+        return true;
     }
 
     /// <inheritdoc cref="IBuilder" />
