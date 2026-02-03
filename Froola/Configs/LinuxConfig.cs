@@ -9,6 +9,11 @@ namespace Froola.Configs;
 public class LinuxConfig
 {
     /// <summary>
+    ///     Linux builder mode (Docker or Remote).
+    /// </summary>
+    public LinuxBuilderMode BuilderMode { get; set; } = LinuxBuilderMode.Docker;
+
+    /// <summary>
     ///     Command for docker
     /// </summary>
     public string DockerCommand { get; set; } = "docker";
@@ -28,6 +33,36 @@ public class LinuxConfig
     ///     Used when DockerPluginsSourcePaths is not specified or version is not found.
     /// </summary>
     public string DockerPluginsSourcePath { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     Base path to Unreal Engine on Linux (Remote mode).
+    /// </summary>
+    public string LinuxUnrealBasePath { get; set; } = "/opt/UnrealEngine";
+
+    /// <summary>
+    ///     SSH username for Linux operations.
+    /// </summary>
+    public string SshUser { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     SSH password for Linux operations.
+    /// </summary>
+    public string SshPassword { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     Path to SSH private key for Linux operations.
+    /// </summary>
+    public string SshPrivateKeyPath { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     SSH host address for Linux operations.
+    /// </summary>
+    public string SshHost { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     SSH port for Linux operations.
+    /// </summary>
+    public int SshPort { get; set; } = 22;
 }
 
 public class LinuxConfigPostConfigure : IPostConfigureOptions<LinuxConfig>

@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ConsoleAppFramework;
+using Froola;
 using Froola.Annotations;
 using Froola.Configs;
 using Froola.Configs.Collections;
@@ -159,7 +160,7 @@ public class PluginCommand(
                 {
                     EditorPlatform.Windows => builders.FirstOrDefault(x => x is IWindowsBuilder),
                     EditorPlatform.Mac => builders.FirstOrDefault(x => x is IMacBuilder),
-                    EditorPlatform.Linux => builders.FirstOrDefault(x => x is ILinuxBuilder),
+                    EditorPlatform.Linux => GetLinuxBuilder(builders, linuxConfig.Value.BuilderMode),
                     _ => throw new ArgumentException($"Unknown OS: {editorPlatform}")
                 };
 
@@ -190,7 +191,7 @@ public class PluginCommand(
                     {
                         EditorPlatform.Windows => builders.FirstOrDefault(x => x is IWindowsBuilder),
                         EditorPlatform.Mac => builders.FirstOrDefault(x => x is IMacBuilder),
-                        EditorPlatform.Linux => builders.FirstOrDefault(x => x is ILinuxBuilder),
+                        EditorPlatform.Linux => GetLinuxBuilder(builders, linuxConfig.Value.BuilderMode),
                         _ => throw new ArgumentException($"Unknown OS: {result.Os}")
                     };
 
@@ -518,6 +519,15 @@ public class PluginCommand(
     private async Task OutputSettings(IConfigJsonExporter configJsonExporter)
     {
         await configJsonExporter.ExportConfigJson(Path.Combine(_pluginConfig.ResultPath, "settings.json"),
-            [_pluginConfig, _gitConfig, windowsConfig.Value, macConfig.Value]);
+            [_pluginConfig, _gitConfig, windowsConfig.Value, macConfig.Value, linuxConfig.Value]);
+    }
+
+    private static IBuilder? GetLinuxBuilder(IEnumerable<IBuilder> builders, LinuxBuilderMode mode)
+    {
+        return mode switch
+        {
+            LinuxBuilderMode.Remote => builders.FirstOrDefault(x => x is ILinuxRemoteBuilder),
+            _ => builders.FirstOrDefault(x => x is ILinuxBuilder)
+        };
     }
 }

@@ -21,8 +21,10 @@ public class PluginContainerBuilder : IContainerBuilder
         services.AddSingleton<IFileSystem, SystemFileSystem>();
         services.AddSingleton<IDockerRunner, DockerRunner>();
         services.AddSingleton<IMacUnrealEngineRunner, MacUnrealEngineRunner>();
+        services.AddSingleton<ILinuxUnrealEngineRunner, LinuxUnrealEngineRunner>();
         services.AddSingleton<IGitClient, GitClient>();
         services.AddSingleton<ISshConnection, SshConnection>();
+        services.AddSingleton<ILinuxSshConnection, LinuxSshConnection>();
         services.AddSingleton<IConfigJsonExporter, ConfigJsonExporter>();
         services.AddSingleton<IProcessRunner, ProcessRunner>();
         
@@ -30,6 +32,7 @@ public class PluginContainerBuilder : IContainerBuilder
         services.AddTransientService<WindowsBuilder>().As<IBuilder>().As<IWindowsBuilder>();
         services.AddTransientService<MacBuilder>().As<IBuilder>().As<IMacBuilder>();
         services.AddTransientService<LinuxBuilder>().As<IBuilder>().As<ILinuxBuilder>();
+        services.AddTransientService<LinuxRemoteBuilder>().As<IBuilder>().As<ILinuxRemoteBuilder>();
         services.AddTransient<ITestResultsEvaluator, TestResultsEvaluator>();
 
         // Logger
