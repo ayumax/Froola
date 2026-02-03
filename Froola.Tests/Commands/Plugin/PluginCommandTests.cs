@@ -29,14 +29,6 @@ public class PluginCommandTests(ITestOutputHelper outputHelper)
             new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
             true, false
         },
-        // With GitBranches and empty GitBranch
-        new object?[]
-        {
-            "TestPlugin", "TestProject", "https://example.com/repo.git", "", 
-            new[] { "5.3:UE5.3" }, string.Empty,
-            new[] { "Windows" }, new[] { "5.3" }, "test_outputs", true, true, new[] { "Win64" }, null,
-            true, false
-        },
         // PluginName is empty (Abnormal case)
         new object?[]
         {

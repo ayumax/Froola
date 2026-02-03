@@ -27,11 +27,12 @@ public class WindowsBuilderTests
 
     private readonly WindowsConfig _windowsConfig = new();
     private readonly MacConfig _macConfig = new();
+    private readonly LinuxConfig _linuxConfig = new();
 
     private WindowsBuilder CreateBuilder()
     {
         return new WindowsBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockUnrealRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object);
     }
@@ -81,11 +82,13 @@ public class WindowsBuilderTests
         PluginConfig pluginConfig,
         WindowsConfig windowsConfig,
         MacConfig macConfig,
+        LinuxConfig linuxConfig,
         IUnrealEngineRunner unrealRunner,
         IFileSystem fileSystem,
         ITestResultsEvaluator testResultsEvaluator,
         IFroolaLogger<WindowsBuilder> logger)
-        : WindowsBuilder(pluginConfig, windowsConfig, macConfig, unrealRunner, fileSystem, testResultsEvaluator, logger)
+        : WindowsBuilder(pluginConfig, windowsConfig, macConfig, linuxConfig, unrealRunner, fileSystem,
+            testResultsEvaluator, logger)
     {
         public int BuildAsyncCallCount { get; private set; }
         public int TestAsyncCallCount { get; private set; }
@@ -126,7 +129,7 @@ public class WindowsBuilderTests
     public async Task Run_BuildFails_EndsImmediately()
     {
         var builder = new TestableWindowsBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockUnrealRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object)
         {
@@ -147,7 +150,7 @@ public class WindowsBuilderTests
     public async Task Run_RunTestAndRunPackage_BothCalledIfFlagsTrue()
     {
         var builder = new TestableWindowsBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockUnrealRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object)
         {
@@ -172,7 +175,7 @@ public class WindowsBuilderTests
     public async Task Run_OnlyTestCalledIfRunTestTrue()
     {
         var builder = new TestableWindowsBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockUnrealRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object)
         {
@@ -195,7 +198,7 @@ public class WindowsBuilderTests
     public async Task Run_OnlyPackageCalledIfRunPackageTrue()
     {
         var builder = new TestableWindowsBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockUnrealRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object)
         {
@@ -218,7 +221,7 @@ public class WindowsBuilderTests
     public async Task Run_RunGamePackageCalledIfFlagTrue()
     {
         var builder = new TestableWindowsBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockUnrealRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object)
         {

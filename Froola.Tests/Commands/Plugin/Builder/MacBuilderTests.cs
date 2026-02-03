@@ -27,11 +27,12 @@ public class MacBuilderTests
 
     private readonly WindowsConfig _windowsConfig = new();
     private readonly MacConfig _macConfig = new();
+    private readonly LinuxConfig _linuxConfig = new();
 
     private MacBuilder CreateBuilder()
     {
         return new MacBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockMacRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object);
     }
@@ -99,11 +100,13 @@ public class MacBuilderTests
             PluginConfig pluginConfig,
             WindowsConfig windowsConfig,
             MacConfig macConfig,
+            LinuxConfig linuxConfig,
             IMacUnrealEngineRunner macUeRunner,
             IFileSystem fileSystem,
             ITestResultsEvaluator testResultsEvaluator,
             IFroolaLogger<MacBuilder> logger)
-            : base(pluginConfig, windowsConfig, macConfig, macUeRunner, fileSystem, testResultsEvaluator, logger)
+            : base(pluginConfig, windowsConfig, macConfig, linuxConfig, macUeRunner, fileSystem, testResultsEvaluator,
+                logger)
         {
         }
 
@@ -130,7 +133,7 @@ public class MacBuilderTests
     public async Task Run_BuildFails_EndsImmediately()
     {
         var builder = new TestableMacBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockMacRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object)
         {
@@ -156,7 +159,7 @@ public class MacBuilderTests
     public async Task Run_RunTestAndRunPackage_BothCalledIfFlagsTrue()
     {
         var builder = new TestableMacBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockMacRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object)
         {
@@ -186,7 +189,7 @@ public class MacBuilderTests
     public async Task Run_OnlyTestCalledIfRunTestTrue()
     {
         var builder = new TestableMacBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockMacRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object)
         {
@@ -215,7 +218,7 @@ public class MacBuilderTests
     public async Task Run_OnlyPackageCalledIfRunPackageTrue()
     {
         var builder = new TestableMacBuilder(
-            _pluginConfig, _windowsConfig, _macConfig,
+            _pluginConfig, _windowsConfig, _macConfig, _linuxConfig,
             _mockMacRunner.Object, _mockFileSystem.Object,
             _mockTestResultsEvaluator.Object, _mockLogger.Object)
         {
