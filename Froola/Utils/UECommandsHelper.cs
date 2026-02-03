@@ -67,11 +67,12 @@ public static class UECommandsHelper
     /// </summary>
     /// <param name="windowsConfig">Configuration for Windows.</param>
     /// <param name="macConfig">Configuration for macOS.</param>
+    /// <param name="linuxConfig">Configuration for Linux.</param>
     /// <param name="engineVersion">Engine version string (e.g. "3", "4", "5").</param>
     /// <param name="os">Target operating system.</param>
     /// <returns>Path to the Unreal Engine directory.</returns>
-    public static string GetUeDirectoryPath(WindowsConfig windowsConfig, MacConfig macConfig, UEVersion engineVersion,
-        EditorPlatform os)
+    public static string GetUeDirectoryPath(WindowsConfig windowsConfig, MacConfig macConfig, LinuxConfig linuxConfig,
+        UEVersion engineVersion, EditorPlatform os)
     {
         return os switch
         {
@@ -79,7 +80,9 @@ public static class UECommandsHelper
                 CombinePath(os, windowsConfig.WindowsUnrealBasePath, $"UE_{engineVersion.ToVersionString()}"),
             EditorPlatform.Mac =>
                 CombinePath(os, macConfig.MacUnrealBasePath, $"UE_{engineVersion.ToVersionString()}"),
-            EditorPlatform.Linux => "/home/ue4/UnrealEngine",
+            EditorPlatform.Linux => linuxConfig.BuilderMode == LinuxBuilderMode.Remote
+                ? CombinePath(os, linuxConfig.LinuxUnrealBasePath, $"UE_{engineVersion.ToVersionString()}")
+                : "/home/ue4/UnrealEngine",
             _ => throw new ArgumentOutOfRangeException(nameof(os), os, null)
         };
     }
@@ -218,14 +221,14 @@ public static class UECommandsHelper
     /// </summary>
     /// <param name="windowsConfig">Configuration for Windows.</param>
     /// <param name="macConfig">Configuration for macOS.</param>
+    /// <param name="linuxConfig">Configuration for Linux.</param>
     /// <param name="engineVersion">Engine version</param>
     /// <param name="editorPlatform">Target editor platform.</param>
     /// <returns>Path to the GenerateProjectFiles script.</returns>
     public static string GetGenerateProjectFiles(WindowsConfig windowsConfig, MacConfig macConfig,
-        UEVersion engineVersion,
-        EditorPlatform editorPlatform)
+        LinuxConfig linuxConfig, UEVersion engineVersion, EditorPlatform editorPlatform)
     {
-        var unrealEngineDir = GetUeDirectoryPath(windowsConfig, macConfig, engineVersion, editorPlatform);
+        var unrealEngineDir = GetUeDirectoryPath(windowsConfig, macConfig, linuxConfig, engineVersion, editorPlatform);
 
         return editorPlatform switch
         {

@@ -21,7 +21,8 @@ public class LinuxBuilder(
     IFileSystem fileSystem,
     ITestResultsEvaluator testResultsEvaluator,
     IFroolaLogger<LinuxBuilder> logger)
-    : BuilderBase(pluginConfig, windowsConfig, macConfig, logger, fileSystem, testResultsEvaluator), ILinuxBuilder
+    : BuilderBase(pluginConfig, windowsConfig, macConfig, linuxConfig, logger, fileSystem, testResultsEvaluator),
+        ILinuxBuilder
 {
     /// <summary>
     /// Gets the editor platform for this builder (Linux).
@@ -34,8 +35,6 @@ public class LinuxBuilder(
                                                 "";
     private string _repoPathInWindows = "";
     private readonly PluginConfig _pluginConfig = pluginConfig;
-    private readonly LinuxConfig _linuxConfig = linuxConfig;
-    private readonly IFileSystem _fileSystem = fileSystem;
 
 
     /// <summary>
@@ -57,13 +56,13 @@ public class LinuxBuilder(
 
         try
         {
-            _fileSystem.CreateDirectory(Path.Combine(RepositoryPath, "TestResults"));
-            _fileSystem.CreateDirectory(Path.Combine(RepositoryPath, "Packages"));
+            FileSystem.CreateDirectory(Path.Combine(RepositoryPath, "TestResults"));
+            FileSystem.CreateDirectory(Path.Combine(RepositoryPath, "Packages"));
 
             if (!await dockerRunner.IsDockerReady())
             {
                 logger.LogError(
-                    $"{linuxConfig.DockerCommand} is not available. Please ensure {linuxConfig.DockerCommand} is installed and running.");
+                    $"{LinuxConfig.DockerCommand} is not available. Please ensure {LinuxConfig.DockerCommand} is installed and running.");
                 return result;
             }
 
@@ -134,7 +133,7 @@ public class LinuxBuilder(
             { _repoPathInWindows, PROJECT_DIR_IN_DOCKER }
         };
 
-        if (linuxConfig.CopyPluginsToDocker)
+        if (LinuxConfig.CopyPluginsToDocker)
         {
             var pluginSourcePath = GetEngineTargetPluginDirectory(engineVersion, false);
             volumeMappings[pluginSourcePath] = UePluginsDirInDocker;
@@ -161,7 +160,7 @@ public class LinuxBuilder(
 
         logger.LogInformation("Package preflight finished");
 
-        var logContent = await _fileSystem.ReadAllTextAsync(logFilePath);
+        var logContent = await FileSystem.ReadAllTextAsync(logFilePath);
         if (!IsUatSuccessLog(logContent))
         {
             logger.LogError("Package preflight failed based on log analysis.");
@@ -178,25 +177,25 @@ public class LinuxBuilder(
 
         try
         {
-            if (!_fileSystem.DirectoryExists(_repoPathInWindows))
+            if (!FileSystem.DirectoryExists(_repoPathInWindows))
             {
-                _fileSystem.CreateDirectory(_repoPathInWindows);
+                FileSystem.CreateDirectory(_repoPathInWindows);
             }
 
             // Copy all files from source (tempDir) to Linux directory (local Docker volume)
             logger.LogInformation(
                 $"Copying files from {baseRepositoryPath} to Linux Docker volume at {_repoPathInWindows}");
-            _fileSystem.CopyDirectory(baseRepositoryPath, _repoPathInWindows);
+            FileSystem.CopyDirectory(baseRepositoryPath, _repoPathInWindows);
 
             logger.LogInformation($"Linux repository prepared at (Docker volume): {_repoPathInWindows}");
 
             if (_pluginConfig.CopyPackageAfterBuild)
             {
                 var pluginDestinationPath = GetEngineTargetPluginDirectory(engineVersion, true);
-                if (_fileSystem.DirectoryExists(pluginDestinationPath))
+                if (FileSystem.DirectoryExists(pluginDestinationPath))
                 {
                     logger.LogInformation($"Removing existing plugin at: {pluginDestinationPath}");
-                    _fileSystem.DeleteDirectory(pluginDestinationPath, true);
+                    FileSystem.DeleteDirectory(pluginDestinationPath, true);
                 }
             }
         }
@@ -224,9 +223,9 @@ public class LinuxBuilder(
 
         try
         {
-            if (_fileSystem.DirectoryExists(RepositoryPath))
+            if (FileSystem.DirectoryExists(RepositoryPath))
             {
-                _fileSystem.DeleteDirectory(RepositoryPath, true);
+                FileSystem.DeleteDirectory(RepositoryPath, true);
                 logger.LogInformation($"Successfully deleted Linux temporary directory: {RepositoryPath}");
             }
         }
@@ -245,7 +244,7 @@ public class LinuxBuilder(
     /// <returns>Corresponding Docker image name.</returns>
     private string GetDockerImageName(UEVersion engineVersion)
     {
-        return linuxConfig.DockerImage.Replace("%v", engineVersion.ToVersionString());
+        return LinuxConfig.DockerImage.Replace("%v", engineVersion.ToVersionString());
     }
 
     /// <summary>
@@ -270,7 +269,7 @@ public class LinuxBuilder(
         };
 
         // Add plugins volume mapping if plugins were prepared
-        if (linuxConfig.CopyPluginsToDocker)
+        if (LinuxConfig.CopyPluginsToDocker)
         {
             var pluginSourcePath = GetEngineTargetPluginDirectory(engineVersion, false);
             volumeMappings[pluginSourcePath] = UePluginsDirInDocker;
@@ -322,7 +321,7 @@ public class LinuxBuilder(
         };
 
         // Add plugins volume mapping if plugins were prepared
-        if (linuxConfig.CopyPluginsToDocker)
+        if (LinuxConfig.CopyPluginsToDocker)
         {
             var pluginSourcePath = GetEngineTargetPluginDirectory(engineVersion, false);
             volumeMappings[pluginSourcePath] = UePluginsDirInDocker;
@@ -354,9 +353,9 @@ public class LinuxBuilder(
 
         // Copy test results generated by Docker container
         var dockerTestResultsPath = Path.Combine(_repoPathInWindows, "TestResults");
-        if (_fileSystem.DirectoryExists(dockerTestResultsPath))
+        if (FileSystem.DirectoryExists(dockerTestResultsPath))
         {
-            _fileSystem.CopyDirectory(dockerTestResultsPath, TestResultDir);
+            FileSystem.CopyDirectory(dockerTestResultsPath, TestResultDir);
         }
 
         var statusOfTest = CheckTestResult(engineVersion) == BuildStatus.Success;
@@ -379,7 +378,7 @@ public class LinuxBuilder(
             { _repoPathInWindows, PROJECT_DIR_IN_DOCKER }
         };
 
-        if (linuxConfig.CopyPluginsToDocker)
+        if (LinuxConfig.CopyPluginsToDocker)
         {
             var pluginSourcePath = GetEngineTargetPluginDirectory(engineVersion, false);
             volumeMappings[pluginSourcePath] = UePluginsDirInDocker;
@@ -390,7 +389,7 @@ public class LinuxBuilder(
 
         try
         {
-            _fileSystem.CreateDirectory(GameDir);
+            FileSystem.CreateDirectory(GameDir);
             await using var writer = new StreamWriter(Path.Combine(GameDir, "BuildGamePackage.log"));
 
             await foreach (var logLine in dockerRunner.RunContainer(dockerImage, command, RepositoryPath,
@@ -409,11 +408,11 @@ public class LinuxBuilder(
         }
 
         var dockerPackagePath = Path.Combine(_repoPathInWindows, "GamePackage");
-        if (_fileSystem.DirectoryExists(dockerPackagePath))
+        if (FileSystem.DirectoryExists(dockerPackagePath))
         {
             var localOutputDir = GameDir;
-            _fileSystem.CreateDirectory(localOutputDir);
-            _fileSystem.CopyDirectory(dockerPackagePath, localOutputDir);
+            FileSystem.CreateDirectory(localOutputDir);
+            FileSystem.CopyDirectory(dockerPackagePath, localOutputDir);
         }
 
         return true;
@@ -438,7 +437,7 @@ public class LinuxBuilder(
         };
 
         // Add plugins volume mapping if plugins were prepared
-        if (linuxConfig.CopyPluginsToDocker)
+        if (LinuxConfig.CopyPluginsToDocker)
         {
             var pluginSourcePath = GetEngineTargetPluginDirectory(engineVersion, false);
             volumeMappings[pluginSourcePath] = UePluginsDirInDocker;
@@ -469,9 +468,9 @@ public class LinuxBuilder(
         logger.LogInformation("Package finished");
 
         var dockerPackagePath = Path.Combine(_repoPathInWindows, "packages");
-        if (_fileSystem.DirectoryExists(dockerPackagePath))
+        if (FileSystem.DirectoryExists(dockerPackagePath))
         {
-            _fileSystem.CopyDirectory(dockerPackagePath, PackageDir);
+            FileSystem.CopyDirectory(dockerPackagePath, PackageDir);
         }
 
         var statusOfPackage = CheckPackageBuildResult(engineVersion) == BuildStatus.Success;
@@ -493,23 +492,23 @@ public class LinuxBuilder(
 
             // Find the packaged plugin directory in the local PackageDir (already copied from Docker)
             var localPackagedPluginDir = Path.Combine(PackageDir, "Plugin");
-            if (!_fileSystem.DirectoryExists(localPackagedPluginDir))
+            if (!FileSystem.DirectoryExists(localPackagedPluginDir))
             {
                 logger.LogWarning($"Packaged plugin directory not found locally: {localPackagedPluginDir}");
                 return;
             }
 
             // Remove existing plugin if it exists
-            if (_fileSystem.DirectoryExists(pluginDestinationPath))
+            if (FileSystem.DirectoryExists(pluginDestinationPath))
             {
-                _fileSystem.DeleteDirectory(pluginDestinationPath, true);
+                FileSystem.DeleteDirectory(pluginDestinationPath, true);
                 logger.LogInformation($"Removed existing plugin at: {pluginDestinationPath}");
             }
 
-            _fileSystem.CreateDirectory(pluginDestinationPath);
+            FileSystem.CreateDirectory(pluginDestinationPath);
 
             // Copy the packaged plugin to the staging area
-            _fileSystem.CopyDirectory(localPackagedPluginDir, pluginDestinationPath);
+            FileSystem.CopyDirectory(localPackagedPluginDir, pluginDestinationPath);
             logger.LogInformation($"Successfully copied packaged plugin from {localPackagedPluginDir} to {pluginDestinationPath}");
             
         }
@@ -524,7 +523,7 @@ public class LinuxBuilder(
     private string GetEngineTargetPluginDirectory(UEVersion engineVersion, bool addMyPluginNameFolder)
     {
         // Get version-specific destination path or fall back to default
-        var destinationPath = Path.Combine(_linuxConfig.DockerPluginsSourcePath, engineVersion.ToVersionString());
+        var destinationPath = Path.Combine(LinuxConfig.DockerPluginsSourcePath, engineVersion.ToVersionString());
 
         if (string.IsNullOrWhiteSpace(destinationPath))
         {

@@ -16,11 +16,12 @@ public class MacBuilder(
     PluginConfig pluginConfig,
     WindowsConfig windowsConfig,
     MacConfig macConfig,
+    LinuxConfig linuxConfig,
     IMacUnrealEngineRunner macUeRunner,
     IFileSystem fileSystem,
     ITestResultsEvaluator testResultsEvaluator,
     IFroolaLogger<MacBuilder> logger)
-    : BuilderBase(pluginConfig, windowsConfig, macConfig, logger, fileSystem, testResultsEvaluator),
+    : BuilderBase(pluginConfig, windowsConfig, macConfig, linuxConfig, logger, fileSystem, testResultsEvaluator),
         IMacBuilder
 {
     private readonly PluginConfig _pluginConfig = pluginConfig;
@@ -169,7 +170,7 @@ public class MacBuilder(
 
         logger.LogInformation("Package preflight finished");
 
-        var logContent = await fileSystem.ReadAllTextAsync(logFilePath);
+        var logContent = await FileSystem.ReadAllTextAsync(logFilePath);
         if (!IsUatSuccessLog(logContent))
         {
             logger.LogError("Package preflight failed based on log analysis.");
@@ -214,7 +215,7 @@ public class MacBuilder(
         }
 
         // Check build log for success
-        var logContent = await fileSystem.ReadAllTextAsync(logFilePath);
+        var logContent = await FileSystem.ReadAllTextAsync(logFilePath);
         if (logContent.Contains("AutomationTool exiting with ExitCode=0") || logContent.Contains("BUILD SUCCESSFUL"))
         {
             logger.LogInformation("Game packaging completed successfully based on log analysis.");
@@ -461,7 +462,7 @@ public class MacBuilder(
 
             // Check if the packaged plugin exists in the local PackageDir
             var localPackagedPluginDir = Path.Combine(PackageDir, "Plugin");
-            if (!fileSystem.DirectoryExists(localPackagedPluginDir))
+            if (!FileSystem.DirectoryExists(localPackagedPluginDir))
             {
                 logger.LogWarning($"Packaged plugin directory not found locally: {localPackagedPluginDir}");
                 return;

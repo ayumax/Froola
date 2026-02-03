@@ -19,15 +19,16 @@ public class WindowsBuilder(
     PluginConfig pluginConfig,
     WindowsConfig windowsConfig,
     MacConfig macConfig,
+    LinuxConfig linuxConfig,
     IUnrealEngineRunner unrealRunner,
     IFileSystem fileSystem,
     ITestResultsEvaluator testResultsEvaluator,
     IFroolaLogger<WindowsBuilder> logger)
-    : BuilderBase(pluginConfig, windowsConfig, macConfig, logger, fileSystem, testResultsEvaluator), IWindowsBuilder
+    : BuilderBase(pluginConfig, windowsConfig, macConfig, linuxConfig, logger, fileSystem, testResultsEvaluator),
+        IWindowsBuilder
 {
     private readonly PluginConfig _pluginConfig = pluginConfig;
     private readonly WindowsConfig _windowsConfig = windowsConfig;
-    private readonly IFileSystem _fileSystem = fileSystem;
 
     /// <summary>
     ///     Gets the editor platform type for Windows.
@@ -142,16 +143,16 @@ public class WindowsBuilder(
     {
         RepositoryPath = Path.Combine(baseRepositoryPath, "..", "Windows");
 
-        _fileSystem.CopyDirectory(baseRepositoryPath, RepositoryPath);
+        FileSystem.CopyDirectory(baseRepositoryPath, RepositoryPath);
 
         if (_pluginConfig.CopyPackageAfterBuild)
         {
             var destinationPath = GetEngineTargetPluginDirectory(engineVersion);
 
             // Remove existing plugin if it exists
-            if (_fileSystem.DirectoryExists(destinationPath))
+            if (FileSystem.DirectoryExists(destinationPath))
             {
-                _fileSystem.DeleteDirectory(destinationPath, true);
+                FileSystem.DeleteDirectory(destinationPath, true);
                 logger.LogInformation($"Removed existing plugin at: {destinationPath}");
             }
         }
@@ -166,7 +167,7 @@ public class WindowsBuilder(
     {
         try
         {
-            _fileSystem.DeleteDirectory(RepositoryPath, true);
+            FileSystem.DeleteDirectory(RepositoryPath, true);
         }
         catch (Exception e)
         {
@@ -293,23 +294,23 @@ public class WindowsBuilder(
 
             // Find the packaged plugin directory
             var packagedPluginDir = Path.Combine(PackageDir, "Plugin");
-            if (!_fileSystem.DirectoryExists(packagedPluginDir))
+            if (!FileSystem.DirectoryExists(packagedPluginDir))
             {
                 logger.LogWarning($"Packaged plugin directory not found: {packagedPluginDir}");
                 return;
             }
             
             // Remove existing plugin if it exists
-            if (_fileSystem.DirectoryExists(destinationPath))
+            if (FileSystem.DirectoryExists(destinationPath))
             {
-                _fileSystem.DeleteDirectory(destinationPath, true);
+                FileSystem.DeleteDirectory(destinationPath, true);
                 logger.LogInformation($"Removed existing plugin at: {destinationPath}");
             }
 
-            _fileSystem.CreateDirectory(destinationPath);
+            FileSystem.CreateDirectory(destinationPath);
 
             // Copy the packaged plugin
-            _fileSystem.CopyDirectory(packagedPluginDir, destinationPath);
+            FileSystem.CopyDirectory(packagedPluginDir, destinationPath);
 
             logger.LogInformation($"Successfully copied packaged plugin from {packagedPluginDir} to {destinationPath}");
         }
@@ -332,7 +333,7 @@ public class WindowsBuilder(
     public virtual async Task<bool> BuildGamePackageAsync(UEVersion engineVersion)
     {
         var outputDir = GameDir;
-        _fileSystem.CreateDirectory(outputDir);
+        FileSystem.CreateDirectory(outputDir);
 
         try
         {

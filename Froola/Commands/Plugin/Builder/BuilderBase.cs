@@ -10,14 +10,35 @@ namespace Froola.Commands.Plugin.Builder;
 /// <summary>
 /// Abstract base class for platform-specific builders. Handles directory and repository setup.
 /// </summary>
-public abstract class BuilderBase(
-    PluginConfig pluginConfig,
-    WindowsConfig windowsConfig,
-    MacConfig macConfig,
-    IFroolaLogger logger,
-    IFileSystem fileSystem,
-    ITestResultsEvaluator testResultsEvaluator)
+public abstract class BuilderBase
 {
+    protected readonly PluginConfig PluginConfig;
+    protected readonly WindowsConfig WindowsConfig;
+    protected readonly MacConfig MacConfig;
+    protected readonly LinuxConfig LinuxConfig;
+    protected readonly IFroolaLogger Logger;
+    protected readonly ITestResultsEvaluator TestResultsEvaluator;
+
+    protected IFileSystem FileSystem { get; }
+
+    protected BuilderBase(
+        PluginConfig pluginConfig,
+        WindowsConfig windowsConfig,
+        MacConfig macConfig,
+        LinuxConfig linuxConfig,
+        IFroolaLogger logger,
+        IFileSystem fileSystem,
+        ITestResultsEvaluator testResultsEvaluator)
+    {
+        PluginConfig = pluginConfig;
+        WindowsConfig = windowsConfig;
+        MacConfig = macConfig;
+        LinuxConfig = linuxConfig;
+        Logger = logger;
+        FileSystem = fileSystem;
+        TestResultsEvaluator = testResultsEvaluator;
+    }
+
     public string RepositoryPath { get; protected set; } = null!;
 
     protected string BuildResultDir = null!;
@@ -42,61 +63,61 @@ public abstract class BuilderBase(
     /// </summary>
     public void InitDirectory(UEVersion engineVersion)
     {
-        BuildResultDir = Path.Combine(pluginConfig.ResultPath, "build",
+        BuildResultDir = Path.Combine(PluginConfig.ResultPath, "build",
             $"{MyEditorPlatform}_{engineVersion.ToFullVersionString()}");
-        if (!fileSystem.DirectoryExists(BuildResultDir))
+        if (!FileSystem.DirectoryExists(BuildResultDir))
         {
-            fileSystem.CreateDirectory(BuildResultDir);
+            FileSystem.CreateDirectory(BuildResultDir);
         }
 
-        TestResultDir = Path.Combine(pluginConfig.ResultPath, "tests",
+        TestResultDir = Path.Combine(PluginConfig.ResultPath, "tests",
             $"{MyEditorPlatform}_{engineVersion.ToFullVersionString()}");
-        if (!fileSystem.DirectoryExists(TestResultDir))
+        if (!FileSystem.DirectoryExists(TestResultDir))
         {
-            fileSystem.CreateDirectory(TestResultDir);
+            FileSystem.CreateDirectory(TestResultDir);
         }
 
-        PackageDir = Path.Combine(pluginConfig.ResultPath, "packages",
+        PackageDir = Path.Combine(PluginConfig.ResultPath, "packages",
             $"{MyEditorPlatform}_{engineVersion.ToFullVersionString()}");
-        if (!fileSystem.DirectoryExists(PackageDir))
+        if (!FileSystem.DirectoryExists(PackageDir))
         {
-            fileSystem.CreateDirectory(PackageDir);
+            FileSystem.CreateDirectory(PackageDir);
         }
         
-        GameDir = Path.Combine(pluginConfig.ResultPath, "game",
+        GameDir = Path.Combine(PluginConfig.ResultPath, "game",
             $"{MyEditorPlatform}_{engineVersion.ToFullVersionString()}");
-        if (!fileSystem.DirectoryExists(GameDir))
+        if (!FileSystem.DirectoryExists(GameDir))
         {
-            fileSystem.CreateDirectory(GameDir);
+            FileSystem.CreateDirectory(GameDir);
         }
 
         ProjectFilePath =
-            UECommandsHelper.GetUprojectPath(RepositoryPath, pluginConfig.ProjectName, MyEditorPlatform);
+            UECommandsHelper.GetUprojectPath(RepositoryPath, PluginConfig.ProjectName, MyEditorPlatform);
 
         UeDirectoryPath =
-            UECommandsHelper.GetUeDirectoryPath(windowsConfig, macConfig, engineVersion, MyEditorPlatform);
+            UECommandsHelper.GetUeDirectoryPath(WindowsConfig, MacConfig, LinuxConfig, engineVersion, MyEditorPlatform);
 
         EditorPath = UECommandsHelper.GetUnrealEditorPath(UeDirectoryPath, MyEditorPlatform);
 
         BuildBatPath = UECommandsHelper.GetBuildScriptPath(UeDirectoryPath, MyEditorPlatform);
 
         BuildProjectArgs =
-            UECommandsHelper.GetBuildCommandArgs(pluginConfig.ProjectName, ProjectFilePath, MyEditorPlatform);
+            UECommandsHelper.GetBuildCommandArgs(PluginConfig.ProjectName, ProjectFilePath, MyEditorPlatform);
 
         RunUatBatPath = UECommandsHelper.GetRunUatScriptPath(UeDirectoryPath, MyEditorPlatform);
 
-        logger.LogInformation("----------------------------------------------");
-        logger.LogInformation($"Build result directory: {BuildResultDir}");
-        logger.LogInformation($"Test result directory: {TestResultDir}");
-        logger.LogInformation($"Package directory: {PackageDir}");
-        logger.LogInformation($"Game directory: {GameDir}");
-        logger.LogInformation($"Project file path: {ProjectFilePath}");
-        logger.LogInformation($"Unreal Engine directory: {UeDirectoryPath}");
-        logger.LogInformation($"Unreal Editor path: {EditorPath}");
-        logger.LogInformation($"Build script path: {BuildBatPath}");
-        logger.LogInformation($"Build project arguments: {BuildProjectArgs}");
-        logger.LogInformation($"Run UAT script path: {RunUatBatPath}");
-        logger.LogInformation("----------------------------------------------");
+        Logger.LogInformation("----------------------------------------------");
+        Logger.LogInformation($"Build result directory: {BuildResultDir}");
+        Logger.LogInformation($"Test result directory: {TestResultDir}");
+        Logger.LogInformation($"Package directory: {PackageDir}");
+        Logger.LogInformation($"Game directory: {GameDir}");
+        Logger.LogInformation($"Project file path: {ProjectFilePath}");
+        Logger.LogInformation($"Unreal Engine directory: {UeDirectoryPath}");
+        Logger.LogInformation($"Unreal Editor path: {EditorPath}");
+        Logger.LogInformation($"Build script path: {BuildBatPath}");
+        Logger.LogInformation($"Build project arguments: {BuildProjectArgs}");
+        Logger.LogInformation($"Run UAT script path: {RunUatBatPath}");
+        Logger.LogInformation("----------------------------------------------");
     }
 
     /// <summary>
@@ -114,7 +135,7 @@ public abstract class BuilderBase(
     /// </summary>
     protected BuildStatus CheckTestResult(UEVersion engineVersion)
     {
-        return testResultsEvaluator.EvaluateTestResults(Path.Combine(TestResultDir, "index.json"), MyEditorPlatform, engineVersion);
+        return TestResultsEvaluator.EvaluateTestResults(Path.Combine(TestResultDir, "index.json"), MyEditorPlatform, engineVersion);
     }
     
     /// <summary>
@@ -122,8 +143,8 @@ public abstract class BuilderBase(
     /// </summary>
     protected BuildStatus CheckPackageBuildResult(UEVersion engineVersion)
     {
-        return testResultsEvaluator.EvaluatePackageBuildResults(
-            Path.Combine(PackageDir, "Plugin", $"{pluginConfig.PluginName}.uplugin"), MyEditorPlatform,
+        return TestResultsEvaluator.EvaluatePackageBuildResults(
+            Path.Combine(PackageDir, "Plugin", $"{PluginConfig.PluginName}.uplugin"), MyEditorPlatform,
             engineVersion);
     }
 
