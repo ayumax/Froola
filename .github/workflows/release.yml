@@ -51,11 +51,12 @@ jobs:
         run: |
           $tag = "v${{ steps.get_version.outputs.version }}"
           git fetch --tags
-          $exists = git rev-parse --verify --quiet "refs/tags/$tag"
-          if ($LASTEXITCODE -eq 0) {
+          $exists = git tag --list $tag
+          if (-not [string]::IsNullOrWhiteSpace($exists)) {
             Write-Error "Tag already exists: $tag"
             exit 1
           }
+          Write-Host "Tag does not exist: $tag"
 
       - name: Create Tag
         run: |
