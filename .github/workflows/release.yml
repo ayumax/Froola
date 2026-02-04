@@ -3,21 +3,25 @@ name: Release
 permissions:
   contents: write
   pull-requests: read
-  
+  id-token: write
+
 on:
-  push:
+  pull_request:
+    types:
+      - closed
     branches:
-      - main
-    paths:
-      - 'Froola/Froola.csproj'
+      - release
 
 jobs:
   build-and-release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'main'
     runs-on: windows-latest
+    environment: release
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || 'release' }}
           fetch-depth: 0
           fetch-tags: true
 
@@ -30,69 +34,99 @@ jobs:
         id: get_version
         shell: pwsh
         run: |
-          # Find the first .csproj file
           $csproj = Get-ChildItem -Path ./Froola -Filter *.csproj | Select-Object -First 1
           if (-not $csproj) {
             Write-Error "No .csproj file found in ./Froola"
             exit 1
           }
           [xml]$xml = Get-Content $csproj.FullName
-          $version = $xml.Project.PropertyGroup.Version
+          $propertyGroup = $xml.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1
+          $version = $propertyGroup.Version
           if ([string]::IsNullOrEmpty($version)) {
             Write-Error "Version is missing in csproj"
             exit 1
           }
+          Write-Host "Release version: $version"
           echo "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-      - name: Check if tag exists
-        id: tag_exists
+      - name: Ensure tag does not exist
         shell: pwsh
         run: |
-          git fetch --tags
           $tag = "v${{ steps.get_version.outputs.version }}"
-          $found = git tag --list $tag
-          if ($found) {
-            echo "exists=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          } else {
-            echo "exists=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          git fetch --tags
+          $exists = git rev-parse --verify --quiet "refs/tags/$tag"
+          if ($LASTEXITCODE -eq 0) {
+            Write-Error "Tag already exists: $tag"
+            exit 1
           }
 
-      - name: Publish
-        if: steps.tag_exists.outputs.exists == 'false'
-        run: dotnet publish ./Froola/Froola.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
-
-      - name: Generate appsettings.json
-        if: steps.tag_exists.outputs.exists == 'false'
-        run: .\publish\Froola.exe init-config -o .\publish
-
-      - name: Zip release files
-        if: steps.tag_exists.outputs.exists == 'false'
-        run: |
-          cd publish
-          Compress-Archive -Path Froola.exe,appsettings.json -DestinationPath ../Froola_${{ steps.get_version.outputs.version }}_win-x64.zip
-
       - name: Create Tag
-        if: steps.tag_exists.outputs.exists == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag v${{ steps.get_version.outputs.version }}
           git push origin v${{ steps.get_version.outputs.version }}
 
+      - name: Publish
+        run: dotnet publish ./Froola/Froola.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Install AzureSignTool
+        shell: pwsh
+        run: |
+          dotnet tool install --global AzureSignTool
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Get Key Vault access token
+        shell: pwsh
+        run: |
+          $token = az account get-access-token --resource https://vault.azure.net --query accessToken -o tsv
+          if ([string]::IsNullOrEmpty($token)) {
+            Write-Error "Failed to obtain Azure Key Vault access token."
+            exit 1
+          }
+          "AZURE_ACCESS_TOKEN=$token" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Sign with AzureSignTool
+        shell: pwsh
+        run: |
+          azuresigntool sign `
+            --kvu "${{ secrets.AZURE_KEY_VAULT_URL }}" `
+            --kvc "codesigning-cert" `
+            --kva "$env:AZURE_ACCESS_TOKEN" `
+            --tr "http://timestamp.digicert.com" `
+            --td sha256 `
+            --fd sha256 `
+            .\publish\Froola.exe
+
+      - name: Generate appsettings.json
+        run: .\publish\Froola.exe init-config -o .\publish
+
+      - name: Zip release files
+        run: |
+          cd publish
+          Compress-Archive -Path Froola.exe,appsettings.json -DestinationPath ../Froola_${{ steps.get_version.outputs.version }}_win-x64.zip
+
       - name: Get previous tag
         id: prev_tag
         shell: pwsh
         run: |
           git fetch --tags
-          $tags = git tag --merged main --sort=-creatordate
-          if ($tags.Count -le 1) {
-            Write-Warning "Only one or no tag exists. No previous tag will be set."
+          $currentTag = "v${{ steps.get_version.outputs.version }}"
+          $tags = @(git tag --merged HEAD --sort=-creatordate | Where-Object { $_ -ne $currentTag })
+          if ($tags.Count -eq 0) {
+            Write-Warning "No previous tag exists."
             $prev = ""
           } else {
-            $prev = $tags[1]
+            $prev = $tags[0]
           }
           echo "tag=$prev" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          exit 0
 
       - name: Generate changelog from PR titles
         id: changelog
@@ -118,7 +152,6 @@ jobs:
           echo "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Create GitHub Release
-        if: steps.tag_exists.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
