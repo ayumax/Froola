@@ -6,22 +6,19 @@ permissions:
   id-token: write
 
 on:
-  pull_request:
-    types:
-      - closed
+  push:
     branches:
       - release
 
 jobs:
   build-and-release:
-    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'main'
     runs-on: windows-latest
     environment: release
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha || 'release' }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           fetch-tags: true
 
